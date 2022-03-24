@@ -36,7 +36,8 @@ defmodule EctoSessions.AuthToken do
 
   @doc """
   Creates a new auth_token with `generate/0` and hashes it with `hash/0`.
-  Returning a tuple `{plaintext_auth_token, hashed_auth_token}`.
+  Returning a tuple `{plaintext_auth_token, auth_token}`.
+  Where `auth_token` might be hashed according to the configuration.
   """
   def get_auth_token do
     plaintext_auth_token = generate()

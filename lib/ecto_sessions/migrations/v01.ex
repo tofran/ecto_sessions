@@ -13,7 +13,7 @@ defmodule EctoSessions.Migrations.V01 do
     if create_schema, do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
 
     create_if_not_exists table(sessions_table_name, primary_key: false, prefix: prefix) do
-      add(:id, :string, primary_key: true)
+      add(:id, :binary_id, primary_key: true)
       add(:auth_token, :string, null: false)
       add(:data, :map, default: %{}, null: false)
       add(:expires_at, :utc_datetime_usec, null: true)
@@ -28,8 +28,8 @@ defmodule EctoSessions.Migrations.V01 do
     create(unique_index(sessions_table_name, [:auth_token]))
 
     if create_extra_field_indexes do
-      for extra_field <- extra_fields do
-        create(index(sessions_table_name, [extra_field]))
+      for {field_name, _field_type} <- extra_fields do
+        create(index(sessions_table_name, [field_name]))
       end
     end
   end

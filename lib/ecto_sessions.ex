@@ -32,112 +32,133 @@ defmodule EctoSessions do
     then database backend sessions for long-lived refresh tokens.
   """
 
-  import Ecto.Query, warn: false
+  # import Ecto.Query
 
-  alias EctoSessions.AuthToken
-  alias EctoSessions.Config
-  alias EctoSessions.Session
+  # alias
+  # alias EctoSessions.Config
+  # alias EctoSessions.Session
 
-  @doc """
-  Creates a session. `attrs` is a map that contains `EctoSessions.Session` attributes,
-  where the keys are atoms.
+  defmacro __using__(opts) do
+    repo = Keyword.fetch!(opts, :repo)
+    table_name = Keyword.get(opts, :table_name, "sessions")
+    prefix = Keyword.get(opts, :prefix, nil)
+    hash_func = Keyword.get(opts, :hash_func, &EctoSessions.AuthToken.hash/1)
+    extra_fields = Keyword.get(opts, :extra_fields, [{:user_id, :string}])
 
-  Uses `Ecto.Repo.insert/2`
+    quote do
+      defmodule Session do
+        use EctoSessions.Session,
+          table_name: unquote(table_name),
+          extra_fields: unquote(Macro.escape(extra_fields))
+      end
 
-  Example
+      import Ecto.Query
 
-    iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
-    %Session{
-      user_id: "1234",
-      data: %{
-        device_name: "Samle Browser",
-        plaintext_auth_token: "plaintext-auth-token"
-        hashed_auth_token: "hashed-token"
-      }
-    }
-  """
-  def create_session(attrs) do
-    %Session{}
-    |> Session.changeset(attrs)
-    |> Config.get_repo().insert()
-  end
+      @repo unquote(repo)
 
-  @doc """
-  Same as `create_session/1` but using `Ecto.Repo.insert!/2`
-  """
-  def create_session!(attrs) do
-    %Session{}
-    |> Session.changeset(attrs)
-    |> Config.get_repo().insert!()
-  end
+      @doc """
+      Creates a session. `attrs` is a map that contains `EctoSessions.Session` attributes,
+      where the keys are atoms.
 
-  @doc """
-  Creates a session using `create_session!/1` returing only the plaintext auth token.
+      Uses `Ecto.Repo.insert/2`
 
-  Example
+      Example
 
-    iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
-    "plaintext-auth-token"
+        iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
+        %Session{
+          user_id: "1234",
+          data: %{
+            device_name: "Samle Browser",
+            plaintext_auth_token: "plaintext-auth-token"
+            auth_token: "hashed-token"
+          }
+        }
+      """
+      def create_session(attrs \\ %{}) do
+        %Session{}
+        |> Session.changeset(attrs)
+        |> @repo.insert(prefix: unquote(prefix))
+      end
 
-  """
-  def get_new_session_auth_token(attrs) do
-    %{plaintext_auth_token: plaintext_auth_token} = create_session!(attrs)
-    plaintext_auth_token
-  end
+      @doc """
+      Same as `create_session/1` but using `Ecto.Repo.insert!/2`
+      """
+      def create_session!(attrs \\ %{}) do
+        %Session{}
+        |> Session.changeset(attrs)
+        |> @repo.insert!(prefix: unquote(prefix))
+      end
 
-  @doc """
-  Returns an ecto query for sessions which have not expired:
-  expires_at can either be null or in the future.
-  """
-  def get_valid_sessions_query() do
-    from(
-      session in Session,
-      where:
-        is_nil(session.expires_at) or
-          session.expires_at > ^DateTime.utc_now()
-    )
-  end
+      @doc """
+      Creates a session using `create_session!/1` returing only the plaintext auth token.
 
-  def get_session_query(:auth_token, plaintext_auth_token) do
-    hashed_auth_token = AuthToken.hash(plaintext_auth_token)
+      Example
 
-    from(
-      session in get_valid_sessions_query(),
-      where: session.hashed_auth_token == ^hashed_auth_token
-    )
-  end
+        iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
+        "plaintext-auth-token"
 
-  def get_session_query(field_name, value) do
-    from(
-      session in get_valid_sessions_query(),
-      where: field(session, ^field_name) == ^value
-    )
-  end
+      """
+      def create_auth_token(attrs \\ %{}) do
+        %{plaintext_auth_token: plaintext_auth_token} = create_session!(attrs)
+        plaintext_auth_token
+      end
 
-  @doc """
-  Returns a session given the field name and the desired value to check for equality.
-  If :auth_token is passed, hashing will be automatically handled.
+      @doc """
+      Returns an ecto query for sessions which have not expired:
+      expires_at can either be null or in the future.
+      """
+      def get_valid_sessions_query() do
+        from(
+          session in Session,
+          where:
+            is_nil(session.expires_at) or
+              session.expires_at > ^DateTime.utc_now()
+        )
+      end
 
-  Uses `Ecto.Repo.one/1`
-  """
-  def get_session(field_name, value) do
-    get_session_query(field_name, value)
-    |> Config.get_repo().one()
-  end
+      def get_session_query(:auth_token, plaintext_auth_token) do
+        auth_token = unquote(hash_func).(plaintext_auth_token)
 
-  @doc """
-  Same as `get_session/2` but using `Ecto.Repo.one!/1`.
-  """
-  def get_session!(field_name, value) do
-    get_session_query(field_name, value)
-    |> Config.get_repo().one!()
-  end
+        from(
+          session in get_valid_sessions_query(),
+          where: session.auth_token == ^auth_token
+        )
+      end
 
-  @doc """
-  Renovates a session expiration following the configuration in `EctoSession.Config`
-  """
-  def renovate_session(session) do
-    Session.changeset(session)
-    |> Config.get_repo().update!()
+      def get_session_query(field_name, value) do
+        from(
+          session in get_valid_sessions_query(),
+          where: field(session, ^field_name) == ^value
+        )
+      end
+
+      @doc """
+      Returns a session given the field name and the desired value to check for equality.
+      If :auth_token is passed, hashing will be automatically handled according to
+      the configuration
+
+      Uses `Ecto.Repo.one/1`
+      """
+      def get_session(field_name, value) do
+        get_session_query(field_name, value)
+        |> @repo.one(prefix: unquote(prefix))
+      end
+
+      @doc """
+      Same as `get_session/2` but using `Ecto.Repo.one!/1`.
+      """
+      def get_session!(field_name, value) do
+        get_session_query(field_name, value)
+        |> @repo.one!(prefix: unquote(prefix))
+      end
+
+      @doc """
+      Renovates a session expiration following the configuration in `EctoSession.Config`
+      """
+      def renovate_session(session) do
+        Session.changeset(session)
+        |> @repo.update!(prefix: unquote(prefix))
+      end
+    end
   end
 end

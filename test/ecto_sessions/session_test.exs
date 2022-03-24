@@ -3,7 +3,19 @@ defmodule EctoSessions.SessionTest do
 
   alias EctoSessions.AuthToken
   alias EctoSessions.Config
-  alias EctoSessions.Session
+
+  defmodule TestRepo do
+    use Ecto.Repo,
+      otp_app: :test,
+      adapter: Ecto.Adapters.Postgres
+  end
+
+  defmodule TestSessions do
+    use EctoSessions,
+      repo: TestRepo
+  end
+
+  alias TestSessions.Session
 
   describe "changeset/2" do
     test "success" do
@@ -12,7 +24,7 @@ defmodule EctoSessions.SessionTest do
                changes: %{
                  expires_at: expires_at,
                  plaintext_auth_token: plaintext_auth_token,
-                 hashed_auth_token: hashed_auth_token,
+                 auth_token: auth_token,
                  user_id: "sample-user-id"
                }
              } =
@@ -26,7 +38,7 @@ defmodule EctoSessions.SessionTest do
 
       assert String.length(plaintext_auth_token) == Config.get_auth_token_length()
 
-      assert AuthToken.hash(plaintext_auth_token) == hashed_auth_token
+      assert AuthToken.hash(plaintext_auth_token) == auth_token
     end
 
     test "success passing data" do
@@ -35,7 +47,7 @@ defmodule EctoSessions.SessionTest do
                changes: %{
                  expires_at: expires_at,
                  plaintext_auth_token: plaintext_auth_token,
-                 hashed_auth_token: hashed_auth_token,
+                 auth_token: auth_token,
                  user_id: "sample-user-id",
                  data: %{
                    app_theme: "dark",
@@ -57,7 +69,7 @@ defmodule EctoSessions.SessionTest do
 
       assert String.length(plaintext_auth_token) == Config.get_auth_token_length()
 
-      assert AuthToken.hash(plaintext_auth_token) == hashed_auth_token
+      assert AuthToken.hash(plaintext_auth_token) == auth_token
     end
 
     test "error missing extra field" do
@@ -67,7 +79,7 @@ defmodule EctoSessions.SessionTest do
                changes: %{
                  expires_at: _,
                  plaintext_auth_token: _,
-                 hashed_auth_token: _
+                 auth_token: _
                }
              } =
                %Session{}
@@ -79,7 +91,7 @@ defmodule EctoSessions.SessionTest do
         expires_at: ~U[2022-01-22 00:00:00.000000Z],
         inserted_at: ~U[2022-01-01 00:00:00.000000Z],
         updated_at: ~U[2022-01-01 00:00:00.000000Z],
-        hashed_auth_token: "sample-hashed-auth-token",
+        auth_token: "sample-hashed-auth-token",
         user_id: "sample-user-id",
         data: %{
           user_agent: "sample-browser"

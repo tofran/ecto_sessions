@@ -1,15 +1,8 @@
 defmodule EctoSessions.Config do
   @moduledoc """
   Tis module handles ecto_sessions configuration.
-    - `sessions_table_name`: Runtime configuration for the length of the session auth token.
-      It will be passed to `EctoSessions.AuthToken.generate`.
-      Defaults to `64`.
-      Can be changed at any time, applies for new sessions only.
-
-    - `repo`: Your ecto repository. Required runtime config.
-
-    - `table_name`: Compile-time configuration for the name of the table where to store Sessions.
-      Defauts to `sessions`.
+    - `auth_token_length`: Runtime configuration for the length of the session auth token.
+      Defaults to `64`. Can be changed at any time, applies for new sessions only.
 
     - `hashing_algorithm`: The hashing algorithm to use:
         - `:sha256` the default;
@@ -60,6 +53,11 @@ defmodule EctoSessions.Config do
 
     - `session_ttl`: How many seconds since the creation a session should last.
       Runtime configuration, defaults to 7 days (`60 * 60 * 24 * 7`).
+
+    - `repo`: Your ecto repository. Required runtime config.
+
+    - `sessions_table_name`: Compile-time configuration for the name of the table where to store Sessions.
+      Defauts to `sessions`.
 
     - `refresh_session_ttl`: The number of seconds that the session should be renovated
       automatically when `Session.changeset()` is called.
