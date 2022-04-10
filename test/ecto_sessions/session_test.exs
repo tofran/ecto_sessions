@@ -2,22 +2,24 @@ defmodule EctoSessions.SessionTest do
   use ExUnit.Case, async: true
 
   alias EctoSessions.AuthToken
-  alias EctoSessions.Config
 
-  defmodule TestRepo do
+  @otp_app :undefined
+
+  defmodule SampleRepo do
     use Ecto.Repo,
-      otp_app: :test,
+      otp_app: :sample_app,
       adapter: Ecto.Adapters.Postgres
   end
 
-  defmodule TestSessions do
+  defmodule DefaultConfigEctoSessions do
     use EctoSessions,
-      repo: TestRepo
+      otp_app: :sample_app,
+      repo: SampleRepo
   end
 
-  alias TestSessions.Session
+  describe "new/1 using defaults" do
+    alias DefaultConfigEctoSessions.Session
 
-  describe "changeset/2" do
     test "success" do
       assert %Ecto.Changeset{
                valid?: true,
@@ -28,17 +30,15 @@ defmodule EctoSessions.SessionTest do
                  user_id: "sample-user-id"
                }
              } =
-               %Session{}
-               |> Session.changeset(%{
+               Session.new(%{
                  user_id: "sample-user-id"
                })
 
-      assert expires_at
-             |> DateTime.compare(DateTime.utc_now()) == :gt
+      assert DateTime.compare(expires_at, DateTime.utc_now()) == :gt
 
-      assert String.length(plaintext_auth_token) == Config.get_auth_token_length()
+      assert plaintext_auth_token =~ ~r/^[A-z0-9\_\-]{64}$/
 
-      assert AuthToken.hash(plaintext_auth_token) == auth_token
+      assert AuthToken.get_digest(plaintext_auth_token, :sha256, nil) == auth_token
     end
 
     test "success passing data" do
@@ -55,8 +55,7 @@ defmodule EctoSessions.SessionTest do
                  }
                }
              } =
-               %Session{}
-               |> Session.changeset(%{
+               Session.new(%{
                  user_id: "sample-user-id",
                  data: %{
                    app_theme: "dark",
@@ -64,15 +63,14 @@ defmodule EctoSessions.SessionTest do
                  }
                })
 
-      assert expires_at
-             |> DateTime.compare(DateTime.utc_now()) == :gt
+      assert DateTime.compare(expires_at, DateTime.utc_now()) == :gt
 
-      assert String.length(plaintext_auth_token) == Config.get_auth_token_length()
+      assert plaintext_auth_token =~ ~r/^[A-z0-9\_\-]{64}$/
 
-      assert AuthToken.hash(plaintext_auth_token) == auth_token
+      assert AuthToken.get_digest(plaintext_auth_token, :sha256, nil) == auth_token
     end
 
-    test "error missing extra field" do
+    test "error missing required extra field" do
       assert %Ecto.Changeset{
                valid?: false,
                errors: [user_id: {"can't be blank", [validation: :required]}],
@@ -81,10 +79,104 @@ defmodule EctoSessions.SessionTest do
                  plaintext_auth_token: _,
                  auth_token: _
                }
-             } =
-               %Session{}
-               |> Session.changeset(%{})
+             } = Session.new(%{})
     end
+  end
+
+  describe "changeset/2 using custom configuration" do
+    defmodule CustomConfigEctoSessions do
+      use EctoSessions,
+        otp_app: :sample_app,
+        repo: SampleRepo
+    end
+
+    alias CustomConfigEctoSessions.Session
+
+    setup do
+      Application.put_env(
+        @otp_app,
+        CustomConfigEctoSessions,
+        auth_token_length: 128,
+        hashing_algorithm: :sha512,
+        secret_salt: "sample-secret-salt",
+        session_ttl: nil
+      )
+    end
+
+    test "success" do
+      assert %Ecto.Changeset{
+               valid?: true,
+               changes:
+                 %{
+                   plaintext_auth_token: plaintext_auth_token,
+                   auth_token: auth_token,
+                   user_id: "sample-user-id"
+                 } = changes
+             } =
+               Session.new(%{
+                 user_id: "sample-user-id"
+               })
+
+      assert :expires_at not in changes
+
+      assert plaintext_auth_token =~ ~r/^[A-z0-9\_\-]{128}$/
+
+      assert auth_token ==
+               AuthToken.get_digest(
+                 plaintext_auth_token,
+                 :sha512,
+                 "sample-secret-salt"
+               )
+    end
+
+    test "success passing data" do
+      assert %Ecto.Changeset{
+               valid?: true,
+               changes:
+                 %{
+                   plaintext_auth_token: plaintext_auth_token,
+                   auth_token: auth_token,
+                   user_id: "sample-user-id",
+                   data: %{
+                     app_theme: "dark",
+                     user_agent: "sample-browser"
+                   }
+                 } = changes
+             } =
+               Session.new(%{
+                 user_id: "sample-user-id",
+                 data: %{
+                   app_theme: "dark",
+                   user_agent: "sample-browser"
+                 }
+               })
+
+      assert :expires_at not in changes
+
+      assert plaintext_auth_token =~ ~r/^[A-z0-9\_\-]{128}$/
+
+      assert auth_token ==
+               AuthToken.get_digest(
+                 plaintext_auth_token,
+                 :sha512,
+                 "sample-secret-salt"
+               )
+    end
+
+    test "error missing required extra field" do
+      assert %Ecto.Changeset{
+               valid?: false,
+               errors: [user_id: {"can't be blank", [validation: :required]}],
+               changes: %{
+                 plaintext_auth_token: _,
+                 auth_token: _
+               }
+             } = Session.new(%{})
+    end
+  end
+
+  describe "changeset/2 using defaults" do
+    alias DefaultConfigEctoSessions.Session
 
     test "success renovating expiration_time" do
       session = %Session{
@@ -113,26 +205,71 @@ defmodule EctoSessions.SessionTest do
     end
   end
 
-  describe "get_expires_at/2" do
+  describe "get_expires_at/2 using default config" do
+    alias DefaultConfigEctoSessions.Session
+
     test "when current expires_at is nil" do
       assert new_expires_at = Session.get_expires_at(nil)
 
-      assert new_expires_at
-             |> DateTime.compare(DateTime.utc_now()) == :gt
+      assert DateTime.compare(new_expires_at, DateTime.utc_now()) == :gt
     end
 
-    test "when current expires_at is set and refresh is enabled" do
+    test "when current expires_at is set (refresh is enabled)" do
       assert new_expires_at = Session.get_expires_at(~U[2022-01-01 00:00:00.000000Z])
 
-      assert new_expires_at
-             |> DateTime.compare(DateTime.utc_now()) == :gt
+      assert DateTime.compare(new_expires_at, DateTime.utc_now()) == :gt
+    end
+  end
+
+  describe "get_expires_at/2 with refresh_session_ttl disabled" do
+    defmodule RefreshingDisabledEctoSessions do
+      use EctoSessions,
+        otp_app: :sample_app,
+        repo: SampleRepo
     end
 
-    # test "when current expires_at is set and refresh is disabled" do
-    # TODO: Can only be properlly tested when settings are no longer global
-    #   assert new_expires_at = Session.get_expires_at(~U[2022-01-01 00:00:00.000000Z])
-    #   assert new_expires_at
-    #          |> DateTime.compare(DateTime.utc_now()) == :gt
-    # end
+    alias RefreshingDisabledEctoSessions.Session
+
+    setup do
+      Application.put_env(
+        @otp_app,
+        RefreshingDisabledEctoSessions,
+        refresh_session_ttl: nil
+      )
+    end
+
+    test "when current expires_at is nil" do
+      assert new_expires_at = Session.get_expires_at(nil)
+
+      assert DateTime.compare(new_expires_at, DateTime.utc_now()) == :gt
+    end
+
+    test "when current expires_at is set" do
+      initial_expires_at = ~U[2022-01-01 00:00:00.000000Z]
+
+      assert initial_expires_at == Session.get_expires_at(initial_expires_at)
+    end
+  end
+
+  describe "get_expires_at/2 with session_ttl disabled" do
+    defmodule SessionTTLDisabledEctoSessions do
+      use EctoSessions,
+        otp_app: :sample_app,
+        repo: SampleRepo
+    end
+
+    alias SessionTTLDisabledEctoSessions.Session
+
+    setup do
+      Application.put_env(
+        @otp_app,
+        SessionTTLDisabledEctoSessions,
+        session_ttl: nil
+      )
+    end
+
+    test "when current expires_at is nil" do
+      assert Session.get_expires_at(nil) == nil
+    end
   end
 end

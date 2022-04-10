@@ -1,58 +1,47 @@
 defmodule EctoSessions do
+  @default_table_name "sessions"
+  @default_extra_fields [{:user_id, :string}]
+
   @moduledoc """
   This lib implements a set of methods to help you handle the storage and
   access to databse-backend sessions.
 
-  It might be used, for example to authorize users via cookies or API keys.
-  The medium you will use the sessions is up to the application implementation.
+  In your application, use `EctoSessions`:
 
-  Using database backed session, might be very helpful in some scenarios.
-  It has quite a few benefits and drawbacks comparing to signed sessions,
-  for example `JWT` or `Plug.Session`.
+  ```elixir
+  defmodule MyApp.EctoSessions do
+    use EctoSessions,
+      repo: MyApp.Repo, # required
+      prefix: nil, # optional
+      table_name: #{inspect(@default_table_name)}, # optional
+      extra_fields: #{inspect(@default_extra_fields)} # optional
+  ```
 
-  Advantages:
-
-    - Ability to query active sessions for a given user.
-      Ex: view the devices where a user has a valid session;
-    - Full control of the validity: at any time your application will be able to
-      control if a given session is valid, change their expiration and even
-      revalidate tokens at any time.
-    - Ability to store arbitrary data, without increating the token size.
-
-  Disadvantages:
-
-    - Depending on the design, you might be adding a database query on each
-      request - just like traditional sessions;
-      Note that you can use a separate database for sessions, and furthermore
-      this code can also be adapted for different backends, like key-value stores.
-    - Clients and other services will not be able to inspect the contents of the token.
-
-    A great design, that allows you to have the benefits of stateless and statefull
-    sessions combined, is to use stateless sessions for short-lived tokens, and
-    then database backend sessions for long-lived refresh tokens.
   """
 
-  # import Ecto.Query
-
-  # alias
-  # alias EctoSessions.Config
-  # alias EctoSessions.Session
-
   defmacro __using__(opts) do
+    ecto_sessions_module = __CALLER__.module
+
     repo = Keyword.fetch!(opts, :repo)
-    table_name = Keyword.get(opts, :table_name, "sessions")
     prefix = Keyword.get(opts, :prefix, nil)
-    hash_func = Keyword.get(opts, :hash_func, &EctoSessions.AuthToken.hash/1)
-    extra_fields = Keyword.get(opts, :extra_fields, [{:user_id, :string}])
+    table_name = Keyword.get(opts, :table_name, @default_table_name)
+    extra_fields = Keyword.get(opts, :extra_fields, @default_extra_fields)
 
     quote do
+      defmodule Config do
+        use EctoSessions.Config,
+          ecto_sessions_module: unquote(ecto_sessions_module)
+      end
+
       defmodule Session do
         use EctoSessions.Session,
+          config_module: unquote(Module.concat([ecto_sessions_module, Config])),
           table_name: unquote(table_name),
           extra_fields: unquote(Macro.escape(extra_fields))
       end
 
       import Ecto.Query
+      alias EctoSessions.AuthToken
 
       @repo unquote(repo)
 
@@ -62,21 +51,20 @@ defmodule EctoSessions do
 
       Uses `Ecto.Repo.insert/2`
 
-      Example
+      ## Examples
 
         iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
         %Session{
           user_id: "1234",
           data: %{
-            device_name: "Samle Browser",
+            device_name: "Sample Browser",
             plaintext_auth_token: "plaintext-auth-token"
             auth_token: "hashed-token"
           }
         }
       """
       def create_session(attrs \\ %{}) do
-        %Session{}
-        |> Session.changeset(attrs)
+        Session.new(attrs)
         |> @repo.insert(prefix: unquote(prefix))
       end
 
@@ -84,8 +72,7 @@ defmodule EctoSessions do
       Same as `create_session/1` but using `Ecto.Repo.insert!/2`
       """
       def create_session!(attrs \\ %{}) do
-        %Session{}
-        |> Session.changeset(attrs)
+        Session.new(attrs)
         |> @repo.insert!(prefix: unquote(prefix))
       end
 
@@ -104,43 +91,67 @@ defmodule EctoSessions do
       end
 
       @doc """
+      Returns an ecto query for sessions which have expired:
+      Whenever expires_at is in the past.
+      """
+      def get_expired_sessions_query() do
+        from(
+          session in Session,
+          where:
+            not is_nil(session.expires_at) or
+              session.expires_at <= ^DateTime.utc_now()
+        )
+      end
+
+      @doc """
       Returns an ecto query for sessions which have not expired:
-      expires_at can either be null or in the future.
+      Whenever expires_at is either null or in the future.
       """
       def get_valid_sessions_query() do
         from(
           session in Session,
+          as: :session,
           where:
             is_nil(session.expires_at) or
               session.expires_at > ^DateTime.utc_now()
         )
       end
 
-      def get_session_query(:auth_token, plaintext_auth_token) do
-        auth_token = unquote(hash_func).(plaintext_auth_token)
+      @doc """
+      Filters a sessions query by the given field.
+
+      When `:auth_token` is passed, hashing will be automatically handled according to
+      the configuration.
+      """
+      def filter_session_query_by(query, :auth_token, plaintext_auth_token) do
+        auth_token_digest =
+          AuthToken.get_digest(
+            plaintext_auth_token,
+            Config.get_hashing_algorithm(),
+            Config.get_secret_salt()
+          )
 
         from(
-          session in get_valid_sessions_query(),
-          where: session.auth_token == ^auth_token
+          session in query,
+          where: session.auth_token == ^auth_token_digest
         )
       end
 
-      def get_session_query(field_name, value) do
+      def filter_session_query_by(query, field_name, value) do
         from(
-          session in get_valid_sessions_query(),
+          session in query,
           where: field(session, ^field_name) == ^value
         )
       end
 
       @doc """
-      Returns a session given the field name and the desired value to check for equality.
-      If :auth_token is passed, hashing will be automatically handled according to
-      the configuration
+      Returns a valid session given the field name and the desired value to check.
 
       Uses `Ecto.Repo.one/1`
       """
       def get_session(field_name, value) do
-        get_session_query(field_name, value)
+        get_valid_sessions_query()
+        |> filter_session_query_by(field_name, value)
         |> @repo.one(prefix: unquote(prefix))
       end
 
@@ -148,7 +159,8 @@ defmodule EctoSessions do
       Same as `get_session/2` but using `Ecto.Repo.one!/1`.
       """
       def get_session!(field_name, value) do
-        get_session_query(field_name, value)
+        get_valid_sessions_query()
+        |> filter_session_query_by(field_name, value)
         |> @repo.one!(prefix: unquote(prefix))
       end
 

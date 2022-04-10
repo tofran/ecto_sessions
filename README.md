@@ -1,14 +1,17 @@
-# Ecto sessions: database backend sessions with ecto
+# Ecto Sessions: database backend sessions with Ecto
 
-This lib implements a set of methods to help you handle the management of
-databse-backend sessions with ecto.
 
-It might be used, for example for authorization via cookies or API keys.
+`ecto_sessions` helps you easily and securely manage database backed sessions
+in your Ecto project.
+
+It might be used, for example to manage authorization via cookies or API keys.
 The medium you will use the sessions is up to the application implementation.
+Ex: session id to be used in a Cookie or X-Api-Token for a REST API.
 
 Using database backed session, might be very helpful in some scenarios.
 It has quite a few benefits and drawbacks comparing to signed sessions,
-for example `JWT` or `Plug.Session`.
+for example `JWT` or signed cookies. It might also be used in combination
+with the later.
 
 Advantages:
 
@@ -16,29 +19,32 @@ Advantages:
     Ex: list the devices where a user has a valid session;
   - Full control of the validity: at any time your application will be able to
     control if a given session is valid, change their expiration and even
-    revalidate tokens at any time.
-  - Ability to store arbitrary data, without increating the token size.
+    revalidate expired tokens at any time.
+  - Ability to store arbitrary data, without increasing the token size.
 
 Disadvantages:
 
   - Depending on the design, you might be adding a database query on each
     request - just like traditional sessions;
-    Note that you can use a separate database for sessions, and furthermore
-    this code can also be adapted for different backends, like key-value stores.
-  - Clients and other services will not be able to inspect the contents of the token.
+    Note that you can use a separate database, and furthermore this code
+    might also be adapted for different backends, like key-value stores.
+  - Clients and other services will not be able to inspect the contents 
+    of the token. This might be useful for example to predict if a token
+    is expired before making a request.
+    This might also be considered an advantage in scenarios you don't want
+    to give any control to the client.
 
-  A great design, that allows you to have the benefits of stateless and
-  statefull sessions combined, is to have *short-lived signed tokens*,
-  and then database backend sessions for long-lived *refresh tokens*.
+One design that allows you to have the benefits of stateless and
+stateful sessions combined, is to have *short-lived signed tokens*,
+and then database backend sessions for long-lived *refresh tokens*.
+
 
 ## Installation
 
-**TODO: Publish to hex**
+[Available on Hex](https://hex.pm/packages/ecto_sessions)
 
-[Available in Hex](https://hex.pm/docs/publish)
-
-The package can be installed
-by adding `ecto_sessions` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `ecto_sessions`
+to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -48,6 +54,5 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/ecto_sessions](https://hexdocs.pm/ecto_sessions).
+The documentation can be found at
+[https://hexdocs.pm/ecto_sessions](https://hexdocs.pm/ecto_sessions).

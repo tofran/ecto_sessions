@@ -6,13 +6,13 @@ defmodule EctoSessions.Migrations.V01 do
   def up(%{
         prefix: prefix,
         create_schema: create_schema,
-        sessions_table_name: sessions_table_name,
+        table_name: table_name,
         extra_fields: extra_fields,
         create_extra_field_indexes: create_extra_field_indexes
       }) do
     if create_schema, do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
 
-    create_if_not_exists table(sessions_table_name, primary_key: false, prefix: prefix) do
+    create_if_not_exists table(table_name, primary_key: false, prefix: prefix) do
       add(:id, :binary_id, primary_key: true)
       add(:auth_token, :string, null: false)
       add(:data, :map, default: %{}, null: false)
@@ -25,19 +25,19 @@ defmodule EctoSessions.Migrations.V01 do
       timestamps(type: :utc_datetime_usec)
     end
 
-    create(unique_index(sessions_table_name, [:auth_token]))
+    create(unique_index(table_name, [:auth_token]))
 
     if create_extra_field_indexes do
       for {field_name, _field_type} <- extra_fields do
-        create(index(sessions_table_name, [field_name]))
+        create(index(table_name, [field_name]))
       end
     end
   end
 
   def down(%{
-        sessions_table_name: sessions_table_name,
+        table_name: table_name,
         prefix: prefix
       }) do
-    drop_if_exists(table(sessions_table_name, prefix: prefix))
+    drop_if_exists(table(table_name, prefix: prefix))
   end
 end

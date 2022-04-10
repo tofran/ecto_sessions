@@ -1,71 +1,145 @@
 defmodule EctoSessions.AuthToken do
   @moduledoc """
   This module handles the generation and hashing of auth tokens.
+  Auth token is a cryptographically random string used for Authorization.
   """
-
-  alias EctoSessions.Config
 
   @doc """
-  Generates a random auth token.
-  `generate/0` will use the configuration parameters, see `EctoSessions.Config` for more informaton.
+  Generates a cryptographically random auth token.
 
   `length` is a psitive integer that will dictate the length of the token.
-  For authentication purposes it should not be lower than 32. The entropy can be calculated as `length^64`.
+  For authentication purposes it should not be lower than 32.
 
-  ## Examples
-
-      iex> generate()
-      4GukTw2aOy77qeC-TnUabqNx_-KJK65SlkS2XiQXKORlk9GxKKjvHCO_8ZhXW0Tw
-
-      iex> generate(32)
-      mwIzAAAIWfTRsaAOTQAUd0-0UsiX-yfM
-
+  The token will contain characters from `A-z`, `0-9` plus `_` and `-`.
+  The  number of unique possible strings (entropy) can be calculated as `64^length`.
   """
-  @spec generate() :: binary
-  def generate() do
-    Config.get_auth_token_length()
-    |> generate()
+  @spec generate_token(non_neg_integer) :: binary
+
+  def generate_token(length) when length < 16 do
+    raise "The auth token length must be at least 16 (128 bits)"
   end
 
-  @spec generate(non_neg_integer) :: binary
-  def generate(length) do
+  def generate_token(length) do
     :crypto.strong_rand_bytes(length)
     |> Base.url_encode64(padding: false)
     |> binary_part(0, length)
   end
 
+  # @spec get_new_token_and_digest(non_neg_integer, atom, binary) :: {binary, binary}
+  # def get_new_token_and_digest(token_length, hashing_algorithm, secret_salt) do
+  #   plaintext_token = generate_token(token_length)
+
+  #   {
+  #     plaintext_token,
+  #     plaintext_token |> get_digest(hashing_algorithm, secret_salt)
+  #   }
+  # end
+
   @doc """
-  Creates a new auth_token with `generate/0` and hashes it with `hash/0`.
-  Returning a tuple `{plaintext_auth_token, auth_token}`.
-  Where `auth_token` might be hashed according to the configuration.
+  Given an auth token, hashes it and salts it. Hashing and salting can be disabling passng
+  `nil`. But salting only works when hashing is enabled.
+
+  See `hash` ad `add_salt` for further reference.
+
+  ## Examples
+
+    iex> get_digest("sample", nil, nil)
+    "sample"
+
+    iex> get_digest("sample", :sha256, nil)
+    "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
+
+    iex> get_digest("sample", :sha256, "your-secret-salt")
+    "709a5d6cba7d3162a1035b0a9cd13064ee4cbe4587cbcc4e378d831e728310c7"
   """
-  def get_auth_token do
-    plaintext_auth_token = generate()
+  @spec get_digest(binary, atom | nil, binary | nil) :: binary
 
-    {plaintext_auth_token, hash(plaintext_auth_token)}
+  def get_digest(_plaintext_token, _hashing_algorithm = nil, secret_salt)
+      when not is_nil(secret_salt) do
+    raise "Cannot salt a token that is not hashed. " <>
+            "When hashing_algorithm is nil secret_salt must also be nil."
   end
 
-  def hash(auth_token) when is_nil(auth_token) or auth_token == "",
-    do: raise("Aborted attempt to hash token: #{inspect(auth_token)}")
-
-  def hash(auth_token) do
-    Config.get_hashing_algorithm()
-    |> hash(auth_token)
+  def get_digest(plaintext_token, hashing_algorithm, secret_salt) do
+    plaintext_token
+    |> salt(secret_salt)
+    |> hash(hashing_algorithm)
   end
 
-  def hash(_hashing_algorithm = nil, auth_token), do: auth_token
+  # Creates a new auth_token with `generate/0` and hashes it with `hash/0`.
+  # Returning a tuple `{plaintext_auth_token, auth_token}`.
+  # Where `auth_token` might be hashed according to the configuration.
 
-  def hash(hashing_algorithm, auth_token) do
-    salted_token = add_salt(auth_token)
+  @doc """
+  Hashes a token with the provided hashing algorith. Uses erlang's `:cripto` module.
 
+  `hashing_algorithm` can be:
+      - `:sha`
+      - `:sha224`
+      - `:sha256`
+      - `:sha384`
+      - `:sha512`
+      - `:sha3_224`
+      - `:sha3_256`
+      - `:sha3_384`
+      - `:sha3_512`
+      - `:blake2b`
+      - `:blake2s`
+      - `:ripemd160`
+      - `nil` to not hash, and store tokens in plaintext - not recommended;
+
+  See [erlang's crypto's `hash_algorithm()`](https://www.erlang.org/doc/man/crypto.html#type-hash_algorithm)
+  for more information
+
+  ## Examples
+    iex> hash("sample", nil)
+    "sample"
+
+    iex> hash("sample", :sha256)
+    "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
+
+    iex> hash("sample", :sha256)
+    "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
+
+    iex> hash("sample", :sha512)
+    "39a5e04aaff7455d9850c605364f514c11324ce64016960d23d5dc57d3ffd8f4" <>
+      "9a739468ab8049bf18eef820cdb1ad6c9015f838556bc7fad4138b23fdf986c7"
+
+    iex> hash("sample", :sha3_256)
+    "f68f564e181663381ef67ae5849d3dd1d0f1044cf468d0a0b7875e4ff121906f"
+
+    iex> hash("sample", :blake2b)
+    "cc6c2d671173dd85a4ef30b0376d14980c20e54c69752fceb4abf6e583924309" <>
+      "e15981e6aa728e9127d5a422b1afdd5cbe1a5d0097f34186f78424d5f3588859"
+
+  """
+  @spec hash(binary, atom) :: any
+  def hash(auth_token, _hashing_algorithm = nil), do: auth_token
+
+  def hash(auth_token, _hashing_algorithm) when is_nil(auth_token) or auth_token == "" do
+    raise("Aborted attempt to hash empty token.")
+  end
+
+  def hash(auth_token, hashing_algorithm) do
     hashing_algorithm
-    |> :crypto.hash(salted_token)
+    |> :crypto.hash(auth_token)
     |> Base.encode16(case: :lower)
   end
 
-  def add_salt(auth_token), do: add_salt(auth_token, Config.get_hashing_secret_salt())
+  @doc """
+  Appends a global, secret salt to the given token.
 
-  def add_salt(auth_token, _salt = nil), do: auth_token
+  ## Examples
 
-  def add_salt(auth_token, salt), do: "#{salt}#{auth_token}"
+    iex> salt("sample", nil)
+    "sample"
+
+    iex> salt("sample", "your-secret-salt")
+    "your-secret-saltsample"
+
+  """
+  @spec salt(binary, binary) :: binary
+  def salt(auth_token, _salt = nil), do: auth_token
+
+  def salt(auth_token, salt), do: "#{salt}#{auth_token}"
 end
