@@ -14,10 +14,7 @@ defmodule EctoSessions.Session do
       Ex: user id, device name or even ui theme.
 
     - Any other field defined under `exra_fields`.
-      Ex: [
-        {:user_id, :string},
-        {:role, :string}
-      ]
+      Ex: `[ {:user_id, :string}, {:role, :string} ]`
 
   By default if you have used `EctoSessions` in your project, import it with:
   `alias MyApp.EctoSessions.Session`

@@ -25,16 +25,6 @@ defmodule EctoSessions.AuthToken do
     |> binary_part(0, length)
   end
 
-  # @spec get_new_token_and_digest(non_neg_integer, atom, binary) :: {binary, binary}
-  # def get_new_token_and_digest(token_length, hashing_algorithm, secret_salt) do
-  #   plaintext_token = generate_token(token_length)
-
-  #   {
-  #     plaintext_token,
-  #     plaintext_token |> get_digest(hashing_algorithm, secret_salt)
-  #   }
-  # end
-
   @doc """
   Given an auth token, hashes it and salts it. Hashing and salting can be disabling passng
   `nil`. But salting only works when hashing is enabled.
@@ -43,14 +33,15 @@ defmodule EctoSessions.AuthToken do
 
   ## Examples
 
-    iex> get_digest("sample", nil, nil)
-    "sample"
+      iex> get_digest("sample", nil, nil)
+      "sample"
 
-    iex> get_digest("sample", :sha256, nil)
-    "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
+      iex> get_digest("sample", :sha256, nil)
+      "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
 
-    iex> get_digest("sample", :sha256, "your-secret-salt")
-    "709a5d6cba7d3162a1035b0a9cd13064ee4cbe4587cbcc4e378d831e728310c7"
+      iex> get_digest("sample", :sha256, "your-secret-salt")
+      "709a5d6cba7d3162a1035b0a9cd13064ee4cbe4587cbcc4e378d831e728310c7"
+
   """
   @spec get_digest(binary, atom | nil, binary | nil) :: binary
 
@@ -74,43 +65,46 @@ defmodule EctoSessions.AuthToken do
   Hashes a token with the provided hashing algorith. Uses erlang's `:cripto` module.
 
   `hashing_algorithm` can be:
-      - `:sha`
-      - `:sha224`
-      - `:sha256`
-      - `:sha384`
-      - `:sha512`
-      - `:sha3_224`
-      - `:sha3_256`
-      - `:sha3_384`
-      - `:sha3_512`
-      - `:blake2b`
-      - `:blake2s`
-      - `:ripemd160`
-      - `nil` to not hash, and store tokens in plaintext - not recommended;
+
+    - `:sha`
+    - `:sha224`
+    - `:sha256`
+    - `:sha384`
+    - `:sha512`
+    - `:sha3_224`
+    - `:sha3_256`
+    - `:sha3_384`
+    - `:sha3_512`
+    - `:blake2b`
+    - `:blake2s`
+    - `:ripemd160`
+    - `nil` to not hash, and store tokens in plaintext - not recommended;
 
   See [erlang's crypto's `hash_algorithm()`](https://www.erlang.org/doc/man/crypto.html#type-hash_algorithm)
   for more information
 
+
   ## Examples
-    iex> hash("sample", nil)
-    "sample"
 
-    iex> hash("sample", :sha256)
-    "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
+      iex> hash("sample", nil)
+      "sample"
 
-    iex> hash("sample", :sha256)
-    "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
+      iex> hash("sample", :sha256)
+      "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
 
-    iex> hash("sample", :sha512)
-    "39a5e04aaff7455d9850c605364f514c11324ce64016960d23d5dc57d3ffd8f4" <>
-      "9a739468ab8049bf18eef820cdb1ad6c9015f838556bc7fad4138b23fdf986c7"
+      iex> hash("sample", :sha256)
+      "af2bdbe1aa9b6ec1e2ade1d694f41fc71a831d0268e9891562113d8a62add1bf"
 
-    iex> hash("sample", :sha3_256)
-    "f68f564e181663381ef67ae5849d3dd1d0f1044cf468d0a0b7875e4ff121906f"
+      iex> hash("sample", :sha512)
+      "39a5e04aaff7455d9850c605364f514c11324ce64016960d23d5dc57d3ffd8f4" <>
+        "9a739468ab8049bf18eef820cdb1ad6c9015f838556bc7fad4138b23fdf986c7"
 
-    iex> hash("sample", :blake2b)
-    "cc6c2d671173dd85a4ef30b0376d14980c20e54c69752fceb4abf6e583924309" <>
-      "e15981e6aa728e9127d5a422b1afdd5cbe1a5d0097f34186f78424d5f3588859"
+      iex> hash("sample", :sha3_256)
+      "f68f564e181663381ef67ae5849d3dd1d0f1044cf468d0a0b7875e4ff121906f"
+
+      iex> hash("sample", :blake2b)
+      "cc6c2d671173dd85a4ef30b0376d14980c20e54c69752fceb4abf6e583924309" <>
+        "e15981e6aa728e9127d5a422b1afdd5cbe1a5d0097f34186f78424d5f3588859"
 
   """
   @spec hash(binary, atom) :: any
@@ -131,11 +125,11 @@ defmodule EctoSessions.AuthToken do
 
   ## Examples
 
-    iex> salt("sample", nil)
-    "sample"
+      iex> salt("sample", nil)
+      "sample"
 
-    iex> salt("sample", "your-secret-salt")
-    "your-secret-saltsample"
+      iex> salt("sample", "your-secret-salt")
+      "your-secret-saltsample"
 
   """
   @spec salt(binary, binary) :: binary

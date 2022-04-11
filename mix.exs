@@ -13,7 +13,7 @@ defmodule EctoSessions.MixProject do
       deps: deps(),
       package: package(),
       docs: [
-        main: "EctoSessions",
+        main: "readme",
         source_url: @source_url,
         extras: [
           "README.md",

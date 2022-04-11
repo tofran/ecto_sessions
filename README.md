@@ -1,4 +1,9 @@
-# Ecto Sessions: database backend sessions with Ecto
+# Ecto Sessions
+
+**Database backend sessions with Ecto.**
+
+[![ecto_sessions in hex.pm](https://img.shields.io/hexpm/v/ecto_sessions?style=flat)](https://hex.pm/packages/ecto_sessions)
+[![ecto_sessions documentation](https://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/ecto_sessions/)
 
 
 `ecto_sessions` helps you easily and securely manage database backed sessions
@@ -41,8 +46,6 @@ and then database backend sessions for long-lived *refresh tokens*.
 
 ## Installation
 
-[Available on Hex](https://hex.pm/packages/ecto_sessions)
-
 The package can be installed by adding `ecto_sessions`
 to your list of dependencies in `mix.exs`:
 
@@ -54,5 +57,13 @@ def deps do
 end
 ```
 
-The documentation can be found at
-[https://hexdocs.pm/ecto_sessions](https://hexdocs.pm/ecto_sessions).
+Then, in your ecto app create the following module:
+
+```elixir
+defmodule MyApp.Sessions do
+  use EctoSessions,
+    repo: MyApp.Repo
+```
+
+Refer to [EctoSessions module documentation](https://hexdocs.pm/ecto_sessions/EctoSessions.html) for more details.
+

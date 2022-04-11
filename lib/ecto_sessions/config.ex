@@ -13,6 +13,53 @@ defmodule EctoSessions.Config do
     refresh_session_ttl: 60 * 60 * 12
   ```
 
+  ### `auth_token_length`
+
+  Returns the length of the session auth token.
+  Defaults to `64`. Can be changed at any time, applies for new sessions only.
+
+  ### `hashing_algorithm`
+
+  Returns the hashing algorithm to use. Can be one of the followng:
+
+    - `:sha256` the default;
+    - `:sha`
+    - `:sha224`
+    - `:sha256`
+    - `:sha384`
+    - `:sha512`
+    - `:sha3_224`
+    - `:sha3_256`
+    - `:sha3_384`
+    - `:sha3_512`
+    - `:blake2b`
+    - `:blake2s`
+    - `:ripemd160`
+    - `nil` to not hash, and store tokens in plaintext;
+
+  See [erlang's crypto `hash_algorithm()`](https://www.erlang.org/doc/man/crypto.html#type-hash_algorithm)
+  for more information.
+
+  ### hashing_algorithm
+
+  Optional *secret salt*, commonly known as *pepper* to be added to the
+  auth token before hashing.
+  **Once changed, invalidates all sessions, as lookup is no longer possible.**
+  Can only be set if `hashing_algorithm` is not `nil`.
+  Set to `nil` to not salt auth_tokens. Defaults to `nil`.
+
+  ### `session_ttl`
+
+  How many seconds since the creation a session should last.
+  Defaults to 7 days (`60 * 60 * 24 * 7`).
+
+  ### `refresh_session_ttl`
+
+  The number of seconds that should be added to the session expires at when
+  calling `Session.changeset()`.
+  `nil` to prevent this behaviour.
+  Defaults to 7 days (`60 * 60 * 24 * 7`).
+
   """
 
   defmacro __using__(opts) do
@@ -45,7 +92,7 @@ defmodule EctoSessions.Config do
         - `:ripemd160`
         - `nil` to not hash, and store tokens in plaintext;
 
-      See [erlang's crypto's `hash_algorithm()`](https://www.erlang.org/doc/man/crypto.html#type-hash_algorithm)
+      See [erlang's crypto `hash_algorithm()`](https://www.erlang.org/doc/man/crypto.html#type-hash_algorithm)
       for more information.
       """
       def get_hashing_algorithm(), do: get_env(:hashing_algorithm, :sha256)
@@ -83,4 +130,10 @@ defmodule EctoSessions.Config do
       end
     end
   end
+
+  @callback get_auth_token_length() :: non_neg_integer()
+  @callback get_hashing_algorithm() :: atom()
+  @callback get_secret_salt() :: binary() | nil
+  @callback get_session_ttl() :: non_neg_integer()
+  @callback get_refresh_session_ttl() :: non_neg_integer()
 end
