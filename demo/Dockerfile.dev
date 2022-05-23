@@ -1,0 +1,22 @@
+
+FROM elixir:1.13.4-alpine
+
+WORKDIR /code
+
+ARG MIX_ENV dev
+ENV MIX_ENV $MIX_ENV
+
+RUN apk update && \
+    apk add --no-cache inotify-tools
+
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+COPY mix.exs mix.lock ./
+RUN mix deps.get
+
+COPY ./ ./
+
+EXPOSE 4000
+
+CMD [ "./start-dev.sh" ]

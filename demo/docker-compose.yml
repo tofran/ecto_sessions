@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ecto_sessions_demo
+    networks:
+      - app-network
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready -q"
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+      args:
+        - MIX_ENV=dev
+    environment:
+      - DATABASE_URL=ecto://postgres:postgres@db/ecto_sessions_demo
+      - PHOENIX_URL=http://localhost:4000
+      - PHOENIX_SECRET_KEY_BASE=yEmI9O0e2duiYwUkGLVZmFfk+hyP6gtCMaGe5r3ZpqGdiPQPIngmKruKJpO/KqA0
+    ports:
+      - 4000:4000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./:/code/
+    tty: true
+    stdin_open: true
+    networks:
+      - app-network
+    command: ./start-dev.sh
+
+networks:
+  app-network:
+    name: app-network
+
+volumes:
+  db:
+
+
