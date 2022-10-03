@@ -4,7 +4,7 @@ defmodule EctoSessions do
 
   @moduledoc """
   This lib implements a set of methods to help you handle the storage and
-  access to databse-backend sessions.
+  access to database-backend sessions.
 
   In your application, use `EctoSessions`:
 
@@ -15,6 +15,7 @@ defmodule EctoSessions do
       prefix: nil, # optional
       table_name: #{inspect(@default_table_name)}, # optional
       extra_fields: #{inspect(@default_extra_fields)} # optional
+  end
   ```
 
   See `EctoSessions.Migrations` for instructions on how to migrate your
@@ -49,23 +50,27 @@ defmodule EctoSessions do
       @repo unquote(repo)
 
       def create_session(attrs \\ %{}) do
-        Session.new(attrs)
+        Session.changeset(attrs)
         |> @repo.insert(prefix: unquote(prefix))
       end
 
       def create_session!(attrs \\ %{}) do
-        Session.new(attrs)
+        Session.changeset(attrs)
         |> @repo.insert!(prefix: unquote(prefix))
       end
 
-      def create_auth_token(attrs \\ %{}) do
-        %{plaintext_auth_token: plaintext_auth_token} = create_session!(attrs)
-        plaintext_auth_token
+      def get_auth_token_from_new_session(attrs \\ %{}) do
+        %{auth_token: auth_token} = create_session!(attrs)
+        auth_token
+      end
+
+      def get_all_sessions_query() do
+        from(session in Session)
       end
 
       def get_expired_sessions_query() do
         from(
-          session in Session,
+          session in get_all_sessions_query(),
           where:
             not is_nil(session.expires_at) or
               session.expires_at <= ^DateTime.utc_now()
@@ -82,6 +87,21 @@ defmodule EctoSessions do
         )
       end
 
+      def filter_session_query(query, filters) do
+        Enum.reduce(
+          filters,
+          query,
+          fn {{field, value}, query_acc} ->
+            IO.inspect({field, value})
+            filter_session_query_by(query_acc, field, value)
+          end
+        )
+      end
+
+      def filter_session_query_by(query, :auth_token, nil) do
+        from(session in query, where: false)
+      end
+
       def filter_session_query_by(query, :auth_token, plaintext_auth_token) do
         auth_token_digest =
           AuthToken.get_digest(
@@ -92,7 +112,7 @@ defmodule EctoSessions do
 
         from(
           session in query,
-          where: session.auth_token == ^auth_token_digest
+          where: session.auth_token_digest == ^auth_token_digest
         )
       end
 
@@ -103,16 +123,36 @@ defmodule EctoSessions do
         )
       end
 
-      def get_session(field_name, value) do
+      defp _get_session_query(field_name, value, options) do
         get_valid_sessions_query()
         |> filter_session_query_by(field_name, value)
+        |> preload(^Keyword.get(options, :preloads, []))
+      end
+
+      def get_session(field_name, value, options \\ []) do
+        _get_session_query(field_name, value, options)
         |> @repo.one(prefix: unquote(prefix))
       end
 
-      def get_session!(field_name, value) do
-        get_valid_sessions_query()
-        |> filter_session_query_by(field_name, value)
+      def get_session!(field_name, value, options \\ []) do
+        _get_session_query(field_name, value, options)
         |> @repo.one!(prefix: unquote(prefix))
+      end
+
+      def list_all_sessions(filters, _options \\ []) do
+        [{field, value}] = filters
+        # FIXME
+
+        get_all_sessions_query()
+        # |> filter_session_query(filters)
+        |> filter_session_query_by(field, value)
+        |> @repo.all(prefix: unquote(prefix))
+      end
+
+      def list_valid_sessions(filters, _options \\ []) do
+        get_valid_sessions_query()
+        |> filter_session_query(filters)
+        |> @repo.all(prefix: unquote(prefix))
       end
 
       def renovate_session(session) do
@@ -130,13 +170,13 @@ defmodule EctoSessions do
 
   ## Examples
 
-      iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
+      iex> create_session(%{user_id: "1234", data: %{device_name: "Sample Browser"}})
       %Session{
         user_id: "1234",
         data: %{
           device_name: "Sample Browser",
-          plaintext_auth_token: "plaintext-auth-token"
-          auth_token: "hashed-token"
+          auth_token: "plaintext-auth-token"
+          auth_token_digest: "hashed-token"
         }
       }
   """
@@ -148,11 +188,11 @@ defmodule EctoSessions do
   @callback create_session!(attrs :: map) :: Ecto.Schema.t()
 
   @doc """
-  Creates a session using `create_session!/1` returing only the plaintext auth token.
+  Creates a session using `create_session!/1` returning only the plaintext auth token.
 
   ## Examples
 
-      iex> create_session(%{user_id: "1234", data: %{device_name: "Samle Browser"}})
+      iex> create_session(%{user_id: "1234", data: %{device_name: "Sample Browser"}})
       "plaintext-auth-token"
 
   """

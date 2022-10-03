@@ -1,41 +1,43 @@
 <section class="phx-hero">
-  <h1><%= gettext "Welcome to %{name}!", name: "Phoenix" %></h1>
-  <p>Peace of mind from prototype to production</p>
+  <h1>ecto_sessions demo</h1>
+  <p>
+    Simple database backed sessions.
+    <br/>
+    <a href="https://github.com/tofran/ecto_sessions">Source code (GitHub)</a>
+    ·
+    <a href="https://hexdocs.pm/ecto_sessions">Documentation (Hexdocs)</a>
+  </p>
 </section>
 
 <section class="row">
   <article class="column">
-    <h2>Resources</h2>
-    <ul>
+    <h2>Signup</h2>
+
+    <%= form_for @conn, Routes.page_path(@conn, :signup), fn f -> %>
+      <%= submit "Create user" %>
+    <% end %>
+
+    <%# <ul>
       <li>
-        <a href="https://hexdocs.pm/phoenix/overview.html">Guides &amp; Docs</a>
+        <a href="https://hexdocs.pm/phoenix/overview.html">Create an account</a>
       </li>
       <li>
-        <a href="https://github.com/phoenixframework/phoenix">Source</a>
+        <a href="https://github.com/phoenixframework/phoenix"></a>
       </li>
       <li>
         <a href="https://github.com/phoenixframework/phoenix/blob/v1.6/CHANGELOG.md">v1.6 Changelog</a>
       </li>
-    </ul>
+    </ul> %>
   </article>
   <article class="column">
-    <h2>Help</h2>
-    <ul>
-      <li>
-        <a href="https://elixirforum.com/c/phoenix-forum">Forum</a>
-      </li>
-      <li>
-        <a href="https://web.libera.chat/#elixir">#elixir on Libera Chat (IRC)</a>
-      </li>
-      <li>
-        <a href="https://twitter.com/elixirphoenix">Twitter @elixirphoenix</a>
-      </li>
-      <li>
-        <a href="https://elixir-slackin.herokuapp.com/">Elixir on Slack</a>
-      </li>
-      <li>
-        <a href="https://discord.gg/elixir">Elixir on Discord</a>
-      </li>
-    </ul>
+    <h2>Login</h2>
+
+    <%= form_for @conn, Routes.page_path(@conn, :login), fn f -> %>
+      <label>
+        User id:
+        <%= text_input f, :user_id, placeholder: "user-id", autocomplete: "off" %>
+      </label>
+      <%= submit "Login" %>
+    <% end %>
   </article>
 </section>

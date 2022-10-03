@@ -4,6 +4,7 @@ defmodule EctoSessionsDemoWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  # TODO: Remove plug sessions
   @session_options [
     store: :cookie,
     key: "_ecto_sessions_demo_key",

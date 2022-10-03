@@ -63,6 +63,7 @@ Then, in your ecto app create the following module:
 defmodule MyApp.Sessions do
   use EctoSessions,
     repo: MyApp.Repo
+end
 ```
 
 Refer to [EctoSessions module documentation](https://hexdocs.pm/ecto_sessions/EctoSessions.html) for more details.

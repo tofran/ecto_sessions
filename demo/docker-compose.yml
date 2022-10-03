@@ -33,6 +33,7 @@ services:
         condition: service_healthy
     volumes:
       - ./:/code/
+      - ../:/ecto_sessions/
     tty: true
     stdin_open: true
     networks:

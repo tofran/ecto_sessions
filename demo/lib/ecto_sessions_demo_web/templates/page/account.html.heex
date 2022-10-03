@@ -1,0 +1,30 @@
+<section class="phx-hero">
+  <h1>Welcome, user <code><%= @user.id %></code></h1>
+  <p>
+    You are accessing this restricted page using the session id <code><%= @session.id %></code>.
+    <br/>
+    The hashed access token is <code><%= @session.auth_token_digest %></code>.
+    <br/>
+    TODO: Describe what the user can do in this page.
+  </p>
+
+  <%= form_for @conn, Routes.page_path(@conn, :sign_out), fn f -> %>
+    <%= submit "Sign-Out" %>
+  <% end %>
+
+</section>
+
+<section class="row">
+  <h2>Sessions</h2>
+
+  <ul>
+    <%= for session <- @sessions do %>
+      <li>
+        Session id: <%= session.id %>
+        Created at: <%= session.inserted_at %>
+        Expires at: <%= session.expires_at %>
+      </li>
+    <% end %>
+  </ul>
+
+</section>

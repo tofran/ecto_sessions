@@ -15,7 +15,10 @@ config :ecto_sessions_demo, EctoSessionsDemo.Repo,
   log: :info,
   pool_size: 10,
   timeout: 190_000,
-  connect_timeout: 10_000
+  connect_timeout: 10_000,
+  migration_timestamps: [
+    type: :utc_datetime_usec
+  ]
 
 if config_env() != :test do
   %{

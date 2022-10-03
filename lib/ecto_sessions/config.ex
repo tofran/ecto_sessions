@@ -121,8 +121,10 @@ defmodule EctoSessions.Config do
       def get_refresh_session_ttl(), do: get_env(:refresh_session_ttl, 60 * 60 * 24 * 7)
 
       defp get_env(key, default \\ nil) do
+        {:ok, application} = :application.get_application(unquote(__CALLER__.module))
+
         Application.get_env(
-          :application.get_application(unquote(__CALLER__.module)),
+          application,
           @ecto_sessions_module,
           []
         )

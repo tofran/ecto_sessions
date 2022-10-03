@@ -1,5 +1,5 @@
 
-FROM elixir:1.13.4-alpine
+FROM 1.14.0-erlang-25.1-alpine-3.16.2
 
 WORKDIR /code
 

@@ -5,15 +5,15 @@ defmodule EctoSessions.Session do
     - `id`: a unique identifier of the session. This should be used by your application
       for internal purposes (ex: references, logs, etc), and not exposed to the end user.
 
-    - `auth_token`: Random hashed token (or not, acoording to the configuration).
+    - `auth_token_digest`: Random hashed token (or not, according to the configuration).
 
-    - `plaintext_auth_token`: A virtual field available ony upon Session creation.
-      It contains an unhashed, plaintext, version of the `auth_token`.
+    - `auth_token`: A virtual field available ony upon Session creation.
+      It contains the plaintext version of the `auth_token_digest`.
 
-    - `data`: any data that your aplication needs to store for this session.
+    - `data`: any data that your application needs to store for this session.
       Ex: user id, device name or even ui theme.
 
-    - Any other field defined under `exra_fields`.
+    - Any other field defined under `extra_fields`.
       Ex: `[ {:user_id, :string}, {:role, :string} ]`
 
   By default if you have used `EctoSessions` in your project, import it with:
@@ -31,7 +31,9 @@ defmodule EctoSessions.Session do
     extra_field_names =
       Enum.map(
         extra_fields,
-        fn {field_name, _field_type} -> field_name end
+        fn {_function, [field_name | _]} ->
+          field_name
+        end
       )
 
     quote do
@@ -44,19 +46,21 @@ defmodule EctoSessions.Session do
 
       @primary_key {:id, :binary_id, autogenerate: true}
       schema unquote(table_name) do
-        field(:auth_token, :string, null: false)
-        field(:plaintext_auth_token, :string, virtual: true)
-        field(:data, :map, null: false, default: %{})
-        field(:expires_at, :utc_datetime_usec, null: true)
+        field(:auth_token, :string, virtual: true, redact: true)
+        field(:auth_token_digest, :string)
+        field(:data, :map, default: %{})
+        field(:expires_at, :utc_datetime_usec)
+        field(:is_valid, :boolean, virtual: true)
 
-        for {field_name, field_type} <- unquote(extra_fields) do
-          field(field_name, field_type, null: false)
+        for {_function, args} <- unquote(extra_fields) do
+          # FIXME function being ignored: in the next line we should call it instead of field
+          apply(&Ecto.Schema.field/2, args)
         end
 
         timestamps(type: :utc_datetime_usec)
       end
 
-      def new(attrs), do: changeset(%__MODULE__{}, attrs)
+      def changeset(attrs), do: changeset(%__MODULE__{}, attrs)
 
       @doc false
       def changeset(session, attrs \\ %{}) do
@@ -81,8 +85,8 @@ defmodule EctoSessions.Session do
               )
 
             changeset
-            |> put_change(:plaintext_auth_token, plaintext_auth_token)
-            |> put_change(:auth_token, auth_token_digest)
+            |> put_change(:auth_token, plaintext_auth_token)
+            |> put_change(:auth_token_digest, auth_token_digest)
 
           _ ->
             changeset
@@ -130,12 +134,5 @@ defmodule EctoSessions.Session do
         end
       end
     end
-  end
-
-  @doc """
-  Retuns a new session without sensitive data: `plaintext_auth_token` is dropped.
-  """
-  def clear_sensitive_data(session) do
-    Map.drop(session, [:plaintext_auth_token])
   end
 end
