@@ -16,6 +16,8 @@ defmodule EctoSessions.Session do
     - Any other field defined under `extra_fields`.
       Ex: `[ {:user_id, :string}, {:role, :string} ]`
 
+    - Virtual `is_expired`, true if the session is not expired.
+
   By default if you have used `EctoSessions` in your project, import it with:
   `alias MyApp.EctoSessions.Session`
 
@@ -42,7 +44,7 @@ defmodule EctoSessions.Session do
 
       alias unquote(config_module)
 
-      @field_names unquote([:data | extra_field_names])
+      @field_names unquote([:data, :expires_at | extra_field_names])
 
       @primary_key {:id, :binary_id, autogenerate: true}
       schema unquote(table_name) do
@@ -50,9 +52,12 @@ defmodule EctoSessions.Session do
         field(:auth_token_digest, :string)
         field(:data, :map, default: %{})
         field(:expires_at, :utc_datetime_usec)
-        field(:is_valid, :boolean, virtual: true)
+        field(:is_expired, :boolean, virtual: true)
 
-        for {_function, args} <- unquote(extra_fields) do
+        for {module, args} <- unquote(extra_fields) do
+          # IO.inspect({module, function, args}, label: "field_mfa")
+          # apply(module, function, args)
+          # apply(Ecto.Schema, :field, [:user_id, :string])
           # FIXME function being ignored: in the next line we should call it instead of field
           apply(&Ecto.Schema.field/2, args)
         end
@@ -62,13 +67,19 @@ defmodule EctoSessions.Session do
 
       def changeset(attrs), do: changeset(%__MODULE__{}, attrs)
 
-      @doc false
       def changeset(session, attrs \\ %{}) do
         session
         |> cast(attrs, @field_names)
-        |> validate_required(@field_names)
         |> put_expires_at()
         |> put_auth_token()
+        |> validate_required(@field_names)
+      end
+
+      def expire_changeset(session) do
+        changeset(
+          session,
+          %{expires_at: DateTime.utc_now()}
+        )
       end
 
       @spec put_auth_token(Ecto.Changeset.t()) :: Ecto.Changeset.t()
@@ -94,10 +105,14 @@ defmodule EctoSessions.Session do
       end
 
       @spec put_expires_at(Ecto.Changeset.t()) :: Ecto.Changeset.t()
+      def put_expires_at(%Ecto.Changeset{changes: %{expires_at: expires_at}} = changeset) do
+        changeset
+      end
+
       def put_expires_at(changeset) do
         expires_at =
           get_field(changeset, :expires_at)
-          |> get_expires_at()
+          |> get_new_expires_at()
 
         put_change(
           changeset,
@@ -106,7 +121,7 @@ defmodule EctoSessions.Session do
         )
       end
 
-      def get_expires_at(_current_expires_at = nil) do
+      def get_new_expires_at(_current_expires_at = nil) do
         case Config.get_session_ttl() do
           nil ->
             nil
@@ -120,7 +135,7 @@ defmodule EctoSessions.Session do
         end
       end
 
-      def get_expires_at(current_expires_at) do
+      def get_new_expires_at(current_expires_at) do
         case Config.get_refresh_session_ttl() do
           nil ->
             current_expires_at

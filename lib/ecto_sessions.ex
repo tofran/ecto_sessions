@@ -1,6 +1,8 @@
 defmodule EctoSessions do
   @default_table_name "sessions"
-  @default_extra_fields [{:user_id, :string}]
+  @default_extra_fields [
+    {Ecto.Schema, :field, [:user_id, :string]}
+  ]
 
   @moduledoc """
   This lib implements a set of methods to help you handle the storage and
@@ -64,39 +66,60 @@ defmodule EctoSessions do
         auth_token
       end
 
-      def get_all_sessions_query() do
-        from(session in Session)
+      def get_sessions_query(filters, options \\ []) do
+        preload = Keyword.get(options, :preload, [])
+        delete_query = Keyword.get(options, :delete_query, false)
+
+        if delete_query do
+          from(session in Session)
+        else
+          from(session in Session,
+            preload: ^preload,
+            order_by: [desc: session.inserted_at],
+            select: %{
+              session
+              | is_expired:
+                  is_nil(session.expires_at) or
+                    session.expires_at <= ^DateTime.utc_now()
+            }
+          )
+        end
+        |> filter_session_query(filters)
       end
 
-      def get_expired_sessions_query() do
-        from(
-          session in get_all_sessions_query(),
-          where:
-            not is_nil(session.expires_at) or
-              session.expires_at <= ^DateTime.utc_now()
+      def filter_session_query(query, filters) when is_list(filters) do
+        filters = Keyword.put_new(filters, :include_expired, false)
+
+        Enum.reduce(
+          filters,
+          query,
+          fn {field, value}, query_acc ->
+            filter_session_query_by(query_acc, field, value)
+          end
         )
       end
 
-      def get_valid_sessions_query() do
+      def filter_session_query_by(query, :include_expired, false) do
         from(
-          session in Session,
-          as: :session,
+          session in query,
           where:
             is_nil(session.expires_at) or
               session.expires_at > ^DateTime.utc_now()
         )
       end
 
-      def filter_session_query(query, filters) do
-        Enum.reduce(
-          filters,
-          query,
-          fn {{field, value}, query_acc} ->
-            IO.inspect({field, value})
-            filter_session_query_by(query_acc, field, value)
-          end
+      def filter_session_query_by(query, :include_expired, true), do: query
+
+      def filter_session_query_by(query, :only_expired, true) do
+        from(
+          session in query,
+          where:
+            not is_nil(session.expires_at) or
+              session.expires_at <= ^DateTime.utc_now()
         )
       end
+
+      def filter_session_query_by(query, :only_expired, false), do: query
 
       def filter_session_query_by(query, :auth_token, nil) do
         from(session in query, where: false)
@@ -116,6 +139,10 @@ defmodule EctoSessions do
         )
       end
 
+      def filter_session_query_by(query, :plaintext_auth_token, plaintext_auth_token) do
+        filter_session_query_by(query, :auth_token, plaintext_auth_token)
+      end
+
       def filter_session_query_by(query, field_name, value) do
         from(
           session in query,
@@ -123,41 +150,50 @@ defmodule EctoSessions do
         )
       end
 
-      defp _get_session_query(field_name, value, options) do
-        get_valid_sessions_query()
-        |> filter_session_query_by(field_name, value)
-        |> preload(^Keyword.get(options, :preloads, []))
-      end
-
-      def get_session(field_name, value, options \\ []) do
-        _get_session_query(field_name, value, options)
+      def get_session(filters, options \\ []) when is_list(filters) do
+        get_sessions_query(filters, options)
         |> @repo.one(prefix: unquote(prefix))
       end
 
-      def get_session!(field_name, value, options \\ []) do
-        _get_session_query(field_name, value, options)
+      def get_session!(filters, options \\ []) do
+        get_sessions_query(filters, options)
         |> @repo.one!(prefix: unquote(prefix))
       end
 
-      def list_all_sessions(filters, _options \\ []) do
-        [{field, value}] = filters
-        # FIXME
-
-        get_all_sessions_query()
-        # |> filter_session_query(filters)
-        |> filter_session_query_by(field, value)
+      def list_sessions(filters, options \\ []) do
+        get_sessions_query(options)
+        |> filter_session_query(filters)
         |> @repo.all(prefix: unquote(prefix))
       end
 
-      def list_valid_sessions(filters, _options \\ []) do
-        get_valid_sessions_query()
+      def list_valid_sessions(filters, options \\ []) do
+        get_sessions_query(options)
         |> filter_session_query(filters)
         |> @repo.all(prefix: unquote(prefix))
       end
 
       def renovate_session(session) do
         Session.changeset(session)
-        |> @repo.update!(prefix: unquote(prefix))
+        |> update_session!()
+      end
+
+      def expire_session!(session) do
+        Session.expire_changeset(session)
+        |> update_session!()
+      end
+
+      def delete_session(session) do
+        session
+        |> @repo.delete(prefix: unquote(prefix))
+      end
+
+      def delete_session!(session) do
+        session
+        |> @repo.delete!(prefix: unquote(prefix))
+      end
+
+      def update_session!(changeset) do
+        @repo.update!(changeset)
       end
     end
   end

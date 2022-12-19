@@ -33,7 +33,7 @@ defmodule EctoSessions.Migrations do
   @default_create_schema true
 
   @doc """
-  Migartes EctoSessions up. Options:
+  Migrates EctoSessions up. Options:
 
    - `prefix`: The database prefix, as documented in `Ecto.Repo`, default to #{@default_prefix}
    - `create_schema`: If the schema should be created.

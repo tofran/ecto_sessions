@@ -21,7 +21,7 @@ defmodule EctoSessions.MixProject do
         ]
       ],
       description:
-        "Helps you easily and securely manage databse backed sessions an ecto project.",
+        "Helps you easily and securely manage database backed sessions an ecto project.",
       name: "Ecto Sessions"
     ]
   end

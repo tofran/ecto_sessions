@@ -11,21 +11,23 @@ in your Ecto project.
 
 It might be used, for example to manage authorization via cookies or API keys.
 The medium you will use the sessions is up to the application implementation.
-Ex: session id to be used in a Cookie or X-Api-Token for a REST API.
+Ex: session id to be used in a Cookie or `X-Api-Token` for a REST API.
 
 Using database backed session, might be very helpful in some scenarios.
 It has quite a few benefits and drawbacks comparing to signed sessions,
 for example `JWT` or signed cookies. It might also be used in combination
-with the later.
+with them.
 
 Advantages:
 
   - Ability to query active sessions for a given user.
-    Ex: list the devices where a user has a valid session;
+    Ex: list the devices where a user has a valid session or lit the active
+    API keys for a given project.
   - Full control of the validity: at any time your application will be able to
     control if a given session is valid, change their expiration and even
-    revalidate expired tokens at any time.
+    revalidate expired tokens.
   - Ability to store arbitrary data, without increasing the token size.
+    Ex: Device/token name, permissions, metadata, etc.
 
 Disadvantages:
 
@@ -41,7 +43,7 @@ Disadvantages:
 
 One design that allows you to have the benefits of stateless and
 stateful sessions combined, is to have *short-lived signed tokens*,
-and then database backend sessions for long-lived *refresh tokens*.
+and database backed sessions for *long-lived refresh tokens*.
 
 
 ## Installation
