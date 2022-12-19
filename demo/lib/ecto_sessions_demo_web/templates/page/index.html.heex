@@ -35,7 +35,13 @@
     <%= form_for @conn, Routes.page_path(@conn, :login), fn f -> %>
       <label>
         User id:
-        <%= text_input f, :user_id, placeholder: "user-id", autocomplete: "off" %>
+        <%= text_input f,
+            :user_id,
+            placeholder: "user-id",
+            autocomplete: "off",
+            value: @last_user_id,
+            required: true
+          %>
       </label>
       <%= submit "Login" %>
     <% end %>

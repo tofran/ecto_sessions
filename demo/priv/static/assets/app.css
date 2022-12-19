@@ -34,3 +34,28 @@
   display: block;
   margin: -1rem 0 2rem;
 }
+
+form {
+  margin: 0;
+  display: inline;
+}
+
+form button {
+  padding: 0 1.0rem;
+}
+
+.expired {
+  color: rgb(142, 0, 0);
+}
+
+tr {
+  vertical-align: text-top;
+}
+
+details dl {
+  font-size: small;
+}
+
+summary {
+  white-space: nowrap;
+}

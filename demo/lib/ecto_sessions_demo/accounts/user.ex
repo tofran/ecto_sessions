@@ -5,8 +5,7 @@ defmodule EctoSessionsDemo.Accounts.User do
   @primary_key {
     :id,
     :string,
-    # autogenerate: {Nanoid, :generate, [2, "ABCD"]}
-    autogenerate: {Nanoid, :generate, [10, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"]}
+    autogenerate: {Nanoid, :generate, [6, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"]}
   }
   @foreign_key_type :string
   schema "users" do

@@ -3,13 +3,13 @@ defmodule EctoSessionsDemo.Repo.Migrations.CreateSessions do
 
   alias EctoSessions.Migrations
 
-  def up,
-    do:
-      Migrations.up(
-        table_name: "sessions",
-        extra_fields: [{:user_id, :string}],
-        create_extra_field_indexes: true
-      )
+  def up do
+    Migrations.up(
+      table_name: "sessions",
+      extra_fields: [{:user_id, :string}],
+      create_extra_field_indexes: true
+    )
+  end
 
   def down, do: Migrations.down()
 end

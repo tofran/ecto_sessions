@@ -10,11 +10,12 @@ defmodule EctoSessionsDemoWeb.Router do
     plug(:put_root_layout, {EctoSessionsDemoWeb.LayoutView, :root})
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
-    plug(:put_session)
+    plug(:put_browser_session)
   end
 
   pipeline :api do
     plug(:accepts, ["json"])
+    plug(:put_api_session)
   end
 
   scope "/", EctoSessionsDemoWeb do
@@ -30,6 +31,14 @@ defmodule EctoSessionsDemoWeb.Router do
 
     get("/account", PageController, :account)
     post("/sign-out", PageController, :sign_out)
+    post("/sign-out-all", PageController, :sign_out_all)
+    post("/expire-session", PageController, :expire_session)
+  end
+
+  scope "/api", EctoSessionsDemoWeb do
+    pipe_through([:api])
+
+    get("/me", ApiController, :me)
   end
 
   # Other scopes may use custom stacks.

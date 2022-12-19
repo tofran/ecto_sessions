@@ -6,19 +6,24 @@ defmodule EctoSessionsDemoWeb.PageController do
   alias EctoSessionsDemo.Accounts
   alias EctoSessionsDemo.Sessions
 
-  @cookie_key "auth_token"
+  @auth_token_cookie_name "auth_token"
+  @last_user_id_cookie_name "last_user_id"
   @cookie_max_age 2 * 365 * 24 * 60 * 60
 
   def index(conn, _params) do
-    render(conn, "index.html")
+    render(
+      conn,
+      "index.html",
+      last_user_id: Map.get(conn.req_cookies, @last_user_id_cookie_name)
+    )
   end
 
   def signup(conn, _params) do
     {:ok, user} = Accounts.create_user()
 
-    conn
-    |> put_flash(:info, "User '#{user.id}' was created, use it to login.")
-    |> redirect(to: Routes.page_path(conn, :index))
+    {:ok, session} = EctoSessionsDemo.Sessions.create_session(%{user_id: user.id})
+
+    post_login(conn, session, user)
   end
 
   def login(conn, params) do
@@ -29,40 +34,178 @@ defmodule EctoSessionsDemoWeb.PageController do
         conn
         |> put_flash(
           :error,
-          "Invalid user id. Please signup first (note: old users might be deleted sporadically, this is a demo project)"
+          "Invalid user id. Please signup first (note: data might be deleted sporadically, this is a demo project)"
         )
         |> redirect(to: Routes.page_path(conn, :index))
 
       user ->
-        {:ok, session} = EctoSessionsDemo.Sessions.create_session(%{user_id: user.id})
+        {:ok, session} =
+          EctoSessionsDemo.Sessions.create_session(%{
+            user_id: user.id,
+            data: %{
+              user_agent:
+                conn
+                |> get_req_header("user-agent")
+                |> List.first(),
+              ip:
+                :inet.ntoa(conn.remote_ip)
+                |> to_string()
+            }
+          })
+
+        post_login(conn, session, user)
+    end
+  end
+
+  def expire_session(
+        conn = %{
+          assigns: %{session: current_session, user: user}
+        },
+        %{"session_id" => session_id}
+      )
+      when current_session.id != session_id do
+    case Sessions.get_session(id: session_id, user_id: user.id) do
+      nil ->
+        conn
+        |> put_flash(
+          :error,
+          "Session #{session_id} not found"
+        )
+        |> redirect(to: Routes.page_path(conn, :account))
+
+      session ->
+        EctoSessionsDemo.Sessions.expire_session!(session)
 
         conn
         |> put_flash(
           :info,
-          "You are now logged in as #{user.id}"
-        )
-        |> Conn.put_resp_cookie(
-          @cookie_key,
-          session.auth_token,
-          max_age: @cookie_max_age
+          "Session #{session_id} expired"
         )
         |> redirect(to: Routes.page_path(conn, :account))
     end
   end
 
+  def expire_session(
+        conn = %{
+          assigns: %{session: session, user: user}
+        },
+        _
+      ) do
+    EctoSessionsDemo.Sessions.expire_session!(session)
+
+    conn
+    |> Conn.delete_resp_cookie(@auth_token_cookie_name)
+    |> put_flash(
+      :info,
+      "Your session has expired, use the user id '#{user.id}' to login back again."
+    )
+    |> redirect(to: Routes.page_path(conn, :index))
+  end
+
+  def sign_out(
+        conn = %{
+          assigns: %{session: current_session, user: user}
+        },
+        %{"session_id" => session_id}
+      )
+      when current_session.id != session_id do
+    case Sessions.get_session(
+           id: session_id,
+           user_id: user.id,
+           include_expired: true
+         ) do
+      nil ->
+        conn
+        |> put_flash(
+          :error,
+          "Session #{session_id} not found"
+        )
+        |> redirect(to: Routes.page_path(conn, :account))
+
+      session ->
+        EctoSessionsDemo.Sessions.delete_session!(session)
+
+        conn
+        |> put_flash(
+          :info,
+          "Session '#{session_id}' deleted."
+        )
+        |> redirect(to: Routes.page_path(conn, :account))
+    end
+  end
+
+  def sign_out(
+        conn = %{
+          assigns: %{session: session, user: user}
+        },
+        _params
+      ) do
+    EctoSessionsDemo.Sessions.delete_session!(session)
+
+    conn
+    |> Conn.delete_resp_cookie(@auth_token_cookie_name)
+    |> put_flash(
+      :info,
+      "You have been logged out, use the user id '#{user.id}' to login back again."
+    )
+    |> redirect(to: Routes.page_path(conn, :index))
+  end
+
   def sign_out(conn, _) do
     conn
-    |> Conn.delete_resp_cookie(@cookie_key)
+    |> Conn.delete_resp_cookie(@auth_token_cookie_name)
+    |> redirect(to: Routes.page_path(conn, :index))
+  end
+
+  def sign_out_all(
+        conn = %{
+          assigns: %{session: _session, user: user}
+        },
+        _params
+      ) do
+    EctoSessionsDemo.Sessions.get_sessions_query([user_id: user.id], delete_query: true)
+    |> EctoSessionsDemo.Repo.delete_all()
+
+    conn
+    |> Conn.delete_resp_cookie(@auth_token_cookie_name)
+    |> put_flash(
+      :info,
+      "You have been logged out, use the user id '#{user.id}' to login back again."
+    )
     |> redirect(to: Routes.page_path(conn, :index))
   end
 
   def account(%{assigns: %{user: current_user}} = conn, _) do
-    sessions = Sessions.list_all_sessions(user_id: current_user.id)
+    sessions =
+      Sessions.list_sessions(
+        user_id: current_user.id,
+        include_expired: true
+      )
 
     render(
       conn,
       "account.html",
-      sessions: sessions
+      sessions: sessions,
+      auth_token: Map.get(conn.req_cookies, @auth_token_cookie_name)
     )
+  end
+
+  defp post_login(conn, session, user) do
+    conn
+    |> put_flash(
+      :info,
+      "You are now logged in as #{user.id}."
+    )
+    |> Conn.put_resp_cookie(
+      @auth_token_cookie_name,
+      session.auth_token,
+      max_age: @cookie_max_age
+    )
+    |> Conn.put_resp_cookie(
+      @last_user_id_cookie_name,
+      user.id,
+      max_age: @cookie_max_age
+    )
+    |> redirect(to: Routes.page_path(conn, :account))
   end
 end
