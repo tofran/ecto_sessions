@@ -6,7 +6,7 @@ defmodule EctoSessions.MixProject do
   def project do
     [
       app: :ecto_sessions,
-      version: "0.1.0",
+      version: "0.0.1-development",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       source_url: @source_url,
