@@ -161,14 +161,12 @@ defmodule EctoSessions do
       end
 
       def list_sessions(filters, options \\ []) do
-        get_sessions_query(options)
-        |> filter_session_query(filters)
+        get_sessions_query(filters, options)
         |> @repo.all(prefix: unquote(prefix))
       end
 
       def list_valid_sessions(filters, options \\ []) do
-        get_sessions_query(options)
-        |> filter_session_query(filters)
+        get_sessions_query(filters, options)
         |> @repo.all(prefix: unquote(prefix))
       end
 
