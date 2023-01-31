@@ -49,23 +49,36 @@ defmodule EctoSessions.Session do
       @primary_key {:id, :binary_id, autogenerate: true}
       schema unquote(table_name) do
         field(:auth_token, :string, virtual: true, redact: true)
-        field(:auth_token_digest, :string)
+        field(:auth_token_digest, :string, redact: true)
         field(:data, :map, default: %{})
         field(:expires_at, :utc_datetime_usec)
         field(:is_expired, :boolean, virtual: true)
 
-        for {module, args} <- unquote(extra_fields) do
-          # IO.inspect({module, function, args}, label: "field_mfa")
-          # apply(module, function, args)
-          # apply(Ecto.Schema, :field, [:user_id, :string])
-          # FIXME function being ignored: in the next line we should call it instead of field
-          apply(&Ecto.Schema.field/2, args)
+        for {function_name, args} <- unquote(extra_fields) do
+          # FIXME Make sure this is more configurable by allowing,
+          #  for example, an {Ecto.Schema, :field, args} or
+          #  an anonymous *function* like &Ecto.Schema.field/2.
+
+          case function_name do
+            :field -> &Ecto.Schema.field/2
+            :has_many -> &Ecto.Schema.has_many/3
+            :has_one -> &Ecto.Schema.has_one/3
+            :belongs_to -> &Ecto.Schema.belongs_to/3
+            :many_to_many -> &Ecto.Schema.many_to_many/3
+          end
+          |> apply(args)
         end
 
         timestamps(type: :utc_datetime_usec)
       end
 
-      def changeset(attrs), do: changeset(%__MODULE__{}, attrs)
+      def changeset(%__MODULE__{} = session) do
+        changeset(session, %{})
+      end
+
+      def changeset(attrs) do
+        changeset(%__MODULE__{}, attrs)
+      end
 
       def changeset(session, attrs \\ %{}) do
         session
@@ -84,9 +97,11 @@ defmodule EctoSessions.Session do
 
       @spec put_auth_token(Ecto.Changeset.t()) :: Ecto.Changeset.t()
       def put_auth_token(changeset) do
-        case get_field(changeset, :auth_token) do
+        case get_field(changeset, :auth_token_digest) do
           nil ->
-            plaintext_auth_token = AuthToken.generate_token(Config.get_auth_token_length())
+            plaintext_auth_token =
+              Config.get_auth_token_length()
+              |> AuthToken.generate_token()
 
             auth_token_digest =
               AuthToken.get_digest(
@@ -105,7 +120,11 @@ defmodule EctoSessions.Session do
       end
 
       @spec put_expires_at(Ecto.Changeset.t()) :: Ecto.Changeset.t()
-      def put_expires_at(%Ecto.Changeset{changes: %{expires_at: expires_at}} = changeset) do
+      def put_expires_at(
+            %Ecto.Changeset{
+              changes: %{expires_at: expires_at}
+            } = changeset
+          ) do
         changeset
       end
 
@@ -141,11 +160,25 @@ defmodule EctoSessions.Session do
             current_expires_at
 
           refresh_session_ttl ->
-            DateTime.add(
-              DateTime.utc_now(),
-              refresh_session_ttl,
-              :second
-            )
+            proposed_expired_at =
+              DateTime.add(
+                DateTime.utc_now(),
+                Config.get_session_ttl(),
+                :second
+              )
+
+            expired_at_threshold =
+              DateTime.add(
+                current_expires_at,
+                refresh_session_ttl,
+                :second
+              )
+
+            if DateTime.compare(proposed_expired_at, expired_at_threshold) == :gt do
+              proposed_expired_at
+            else
+              current_expires_at
+            end
         end
       end
     end

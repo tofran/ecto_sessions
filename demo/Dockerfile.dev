@@ -1,7 +1,4 @@
-
-FROM 1.14.0-erlang-25.1-alpine-3.16.2
-
-WORKDIR /code
+FROM hexpm/elixir:1.14.2-erlang-25.1-alpine-3.17.0
 
 ARG MIX_ENV dev
 ENV MIX_ENV $MIX_ENV
@@ -12,10 +9,12 @@ RUN apk update && \
 RUN mix local.hex --force && \
     mix local.rebar --force
 
-COPY mix.exs mix.lock ./
-RUN mix deps.get
+WORKDIR /code
+# COPY mix.exs mix.lock ./
+# RUN mix deps.get
 
-COPY ./ ./
+COPY ./demo ./
+COPY ./ /ecto_sessions/
 
 EXPOSE 4000
 

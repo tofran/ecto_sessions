@@ -39,4 +39,6 @@ if config_env() != :test do
       port: port,
       scheme: scheme
     ]
+else
+  config :ecto_sessions_demo, EctoSessionsDemo.Repo, url: fetch_env.("TEST_DATABASE_URL")
 end

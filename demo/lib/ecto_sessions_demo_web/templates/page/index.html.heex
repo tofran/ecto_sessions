@@ -13,7 +13,7 @@
   <article class="column">
     <h2>Signup</h2>
 
-    <%= form_for @conn, Routes.page_path(@conn, :signup), fn f -> %>
+    <%= form_for @conn, Routes.page_path(@conn, :signup), fn _form -> %>
       <%= submit "Create user" %>
     <% end %>
 

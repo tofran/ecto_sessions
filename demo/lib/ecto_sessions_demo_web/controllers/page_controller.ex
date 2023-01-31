@@ -18,12 +18,43 @@ defmodule EctoSessionsDemoWeb.PageController do
     )
   end
 
+  defp create_session(conn, user) do
+    {:ok, session} =
+      EctoSessionsDemo.Sessions.create_session(%{
+        user_id: user.id,
+        data: %{
+          user_agent:
+            conn
+            |> get_req_header("user-agent")
+            |> List.first(),
+          ip:
+            :inet.ntoa(conn.remote_ip)
+            |> to_string()
+        }
+      })
+
+    conn
+    |> put_flash(
+      :info,
+      "You are now logged in as #{user.id}."
+    )
+    |> Conn.put_resp_cookie(
+      @auth_token_cookie_name,
+      session.auth_token,
+      max_age: @cookie_max_age
+    )
+    |> Conn.put_resp_cookie(
+      @last_user_id_cookie_name,
+      user.id,
+      max_age: @cookie_max_age
+    )
+    |> redirect(to: Routes.page_path(conn, :account))
+  end
+
   def signup(conn, _params) do
     {:ok, user} = Accounts.create_user()
 
-    {:ok, session} = EctoSessionsDemo.Sessions.create_session(%{user_id: user.id})
-
-    post_login(conn, session, user)
+    create_session(conn, user)
   end
 
   def login(conn, params) do
@@ -39,21 +70,7 @@ defmodule EctoSessionsDemoWeb.PageController do
         |> redirect(to: Routes.page_path(conn, :index))
 
       user ->
-        {:ok, session} =
-          EctoSessionsDemo.Sessions.create_session(%{
-            user_id: user.id,
-            data: %{
-              user_agent:
-                conn
-                |> get_req_header("user-agent")
-                |> List.first(),
-              ip:
-                :inet.ntoa(conn.remote_ip)
-                |> to_string()
-            }
-          })
-
-        post_login(conn, session, user)
+        create_session(conn, user)
     end
   end
 
@@ -188,24 +205,5 @@ defmodule EctoSessionsDemoWeb.PageController do
       sessions: sessions,
       auth_token: Map.get(conn.req_cookies, @auth_token_cookie_name)
     )
-  end
-
-  defp post_login(conn, session, user) do
-    conn
-    |> put_flash(
-      :info,
-      "You are now logged in as #{user.id}."
-    )
-    |> Conn.put_resp_cookie(
-      @auth_token_cookie_name,
-      session.auth_token,
-      max_age: @cookie_max_age
-    )
-    |> Conn.put_resp_cookie(
-      @last_user_id_cookie_name,
-      user.id,
-      max_age: @cookie_max_age
-    )
-    |> redirect(to: Routes.page_path(conn, :account))
   end
 end

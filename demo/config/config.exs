@@ -8,8 +8,7 @@ config :ecto_sessions_demo,
 config :ecto_sessions_demo, EctoSessionsDemoWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [view: EctoSessionsDemoWeb.ErrorView, accepts: ~w(html json), layout: false],
-  pubsub_server: EctoSessionsDemo.PubSub,
-  live_view: [signing_salt: "gFvEdHDY"]
+  pubsub_server: EctoSessionsDemo.PubSub
 
 # Configures Elixir's Logger
 config :logger, :console,

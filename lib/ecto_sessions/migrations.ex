@@ -1,6 +1,6 @@
 defmodule EctoSessions.Migrations do
   @moduledoc """
-  Run the migrations needed to have ecto_sessions table and indexes.
+  Module to help you handle database migrations for `EctoSessions`.
   If you are just starting use this interface instead of calling migrations directly.
 
   ## How-to

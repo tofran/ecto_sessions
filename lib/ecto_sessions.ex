@@ -1,28 +1,35 @@
 defmodule EctoSessions do
   @default_table_name "sessions"
   @default_extra_fields [
-    {Ecto.Schema, :field, [:user_id, :string]}
+    {:field, [:user_id, :string]}
   ]
 
   @moduledoc """
   This lib implements a set of methods to help you handle the storage and
-  access to database-backend sessions.
+  access to database-backend sessions with ecto.
 
   In your application, use `EctoSessions`:
 
   ```elixir
   defmodule MyApp.Sessions do
     use EctoSessions,
-      repo: MyApp.Repo, # required
-      prefix: nil, # optional
-      table_name: #{inspect(@default_table_name)}, # optional
-      extra_fields: #{inspect(@default_extra_fields)} # optional
+      repo: MyApp.Repo,
+      prefix: nil,
+      table_name: #{inspect(@default_table_name)},
+      extra_fields: #{inspect(@default_extra_fields)}
   end
   ```
 
+  Parameters:
+
+    - `repo`: your ecto repo module, required. Ex: `MyApp.Repo`.
+    - `prefix`: ecto prefix, optional, default to `nil`.
+    - `table_name`: The table name for these sessions.
+      Create a module using `EctoSessions` for each table, ex: Sessions, ApiKeys, etc.
+    - `extra_fields`: Extra, custom, high-level, fields (columns) for the session schema.
+
   See `EctoSessions.Migrations` for instructions on how to migrate your
   database.
-
   """
 
   defmacro __using__(opts) do
@@ -59,11 +66,6 @@ defmodule EctoSessions do
       def create_session!(attrs \\ %{}) do
         Session.changeset(attrs)
         |> @repo.insert!(prefix: unquote(prefix))
-      end
-
-      def get_auth_token_from_new_session(attrs \\ %{}) do
-        %{auth_token: auth_token} = create_session!(attrs)
-        auth_token
       end
 
       def get_sessions_query(filters, options \\ []) do
@@ -170,7 +172,7 @@ defmodule EctoSessions do
         |> @repo.all(prefix: unquote(prefix))
       end
 
-      def renovate_session(session) do
+      def refresh_session(session) do
         Session.changeset(session)
         |> update_session!()
       end
@@ -219,54 +221,67 @@ defmodule EctoSessions do
   @doc """
   Same as `create_session/1` but using `Ecto.Repo.insert!/2`.
   """
-  @callback create_session!(attrs :: map) :: Ecto.Schema.t()
+  @callback create_session!(filters :: map, options :: list) :: Ecto.Schema.t()
 
   @doc """
-  Creates a session using `create_session!/1` returning only the plaintext auth token.
+  Retrieves a query to the sessions.
 
-  ## Examples
-
-      iex> create_session(%{user_id: "1234", data: %{device_name: "Sample Browser"}})
-      "plaintext-auth-token"
+  Options:
+   - `delete_query`: Boolean that indicates a delete query a
+     should be returned. Instead of a select one (the default: false).
+   - `preload`: Shorthand for `preload` query argument.
 
   """
-  @callback create_auth_token(attrs :: map()) :: Ecto.Schema.t()
+  @callback get_sessions_query(attrs :: any) :: Ecto.Query.t()
 
   @doc """
-  Returns an ecto query for sessions which have expired:
-  Whenever expires_at is in the past.
+  Filters a session query.
   """
-  @callback get_expired_sessions_query() :: Ecto.Queryable.t()
-
-  @doc """
-  Returns an ecto query for sessions which have not expired:
-  Whenever expires_at is either null or in the future.
-  """
-  @callback get_valid_sessions_query() :: Ecto.Queryable.t()
-
-  @doc """
-  Filters a sessions query by the given field.
-
-  When `:auth_token` is passed, hashing will be automatically handled according to
-  the configuration.
-  """
-  @callback filter_session_query_by(query :: Ecto.Queryable.t(), field_name :: atom, value :: any) ::
+  @callback filter_session_query(query :: Ecto.Queryable.t(), filters :: any) ::
               Ecto.Queryable.t()
 
   @doc """
-  Returns a valid session given the field name and the desired value to check.
-
-  Uses `Ecto.Repo.one/1`
+  Filters a session query by the given argument.
   """
-  @callback get_session(field_name :: atom, value :: any) :: Ecto.Schema.t()
+  @callback filter_session_query_by(query :: any, filters :: any) :: Ecto.Queryable.t()
 
   @doc """
-  Same as `get_session/2` but using `Ecto.Repo.one!/1`.
+  Retrieves a session from the database.
   """
-  @callback get_session!(field_name :: atom, value :: any) :: Ecto.Schema.t()
+  @callback get_session(filters :: any, options :: list) :: {atom, Ecto.Schema.t()}
 
   @doc """
-  Renovates a session expiration following the configuration in `EctoSession.Config`.
+  Retrieves a session from the database using `Repo.one!`
   """
-  @callback renovate_session!(session :: Ecto.Schema.t()) :: Ecto.Schema.t()
+  @callback get_session!(filters :: any, options :: list) :: Ecto.Schema.t()
+
+  @doc """
+  Retrieve sessions matching the provided filters.
+  """
+  @callback list_sessions(filters :: any, options :: list) :: list(Ecto.Queryable.t())
+
+  @doc """
+  Retrieve valid sessions matching the provided filters.
+  """
+  @callback list_valid_sessions(filters :: any, options :: list) :: list(Ecto.Queryable.t())
+
+  @doc """
+  Given a session, ensure `expires_at` is updated according to the `EctoSessions.Config`.
+  """
+  @callback refresh_session(Ecto.Schema.t()) :: Ecto.Schema.t()
+
+  @doc """
+  Deletes the session using `Repo.delete`.
+  """
+  @callback delete_session(Ecto.Schema.t()) :: {atom, any}
+
+  @doc """
+  Deletes the session using `Repo.delete!`.
+  """
+  @callback delete_session!(Ecto.Schema.t()) :: any
+
+  @doc """
+  Updates a session using `Repo.update!`.
+  """
+  @callback delete_session!(Ecto.Changeset.t()) :: Ecto.Schema.t()
 end

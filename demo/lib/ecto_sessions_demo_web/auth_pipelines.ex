@@ -49,6 +49,7 @@ defmodule EctoSessionsDemoWeb.AuthPipelines do
   defp get_session_and_current_user(auth_token) do
     with session when not is_nil(session) <- Sessions.get_session(auth_token: auth_token),
          user when not is_nil(session) <- Accounts.get_user(session.user_id) do
+      session = Sessions.refresh_session(session)
       {session, user}
     else
       _ ->

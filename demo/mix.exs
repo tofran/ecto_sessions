@@ -4,8 +4,13 @@ defmodule EctoSessionsDemo.MixProject do
   def project do
     [
       app: :ecto_sessions_demo,
-      version: "0.1.0",
-      elixir: "~> 1.12",
+      version:
+        Regex.replace(
+          ~r/^v+/,
+          System.get_env("VERSION", "v0.0.1-development"),
+          ""
+        ),
+      elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
