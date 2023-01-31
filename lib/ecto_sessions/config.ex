@@ -20,7 +20,7 @@ defmodule EctoSessions.Config do
 
   ### `hashing_algorithm`
 
-  Returns the hashing algorithm to use. Can be one of the followng:
+  Returns the hashing algorithm to use. Can be one of the following:
 
     - `:sha256` the default;
     - `:sha`
@@ -69,14 +69,14 @@ defmodule EctoSessions.Config do
       @ecto_sessions_module unquote(ecto_sessions_module)
 
       @doc """
-      Returns the length of the session auth token (from `auth_token_length` applicaton env).
+      Returns the length of the session auth token (from `auth_token_length` application env).
       Defaults to `64`. Can be changed at any time, applies for new sessions only.
       """
       def get_auth_token_length(), do: get_env(:auth_token_length, 64)
 
       @doc """
-      Returns the hashing algorithm to use (from `hashing_algorithm` aplicaton env).
-      Can be one of the followng:
+      Returns the hashing algorithm to use (from `hashing_algorithm` application env).
+      Can be one of the following:
         - `:sha256` the default;
         - `:sha`
         - `:sha224`
@@ -113,16 +113,26 @@ defmodule EctoSessions.Config do
       def get_session_ttl(), do: get_env(:session_ttl, 60 * 60 * 24 * 7)
 
       @doc """
-      The number of seconds that should be added to the session expires at when
-      calling `Session.changeset()`.
-      `nil` to prevent this behaviour.
-      Runtime configuration from `refresh_session_ttl`, defaults to 7 days (`60 * 60 * 24 * 7`).
+      The number of seconds from the `session_ttl` to consider the session as needing to
+      be refreshed. This prevents constant update of the session `expires_at`.
+      Set to `nil` to prevent session refreshing, and `0` to refresh it every time.
+
+      Session is refreshed by any update that calls `Session.changeset` and manually
+      calling `refresh_session`.
+
+      Runtime configuration from `refresh_session_ttl`, defaults to 1 day (`60 * 60 * 24`).
+      Must be lower than `session_ttl`.
+
+      TODO: RENAME this is not really a TTL,
+      it is **a threshold, in seconds to keep the value unchanged**.
       """
-      def get_refresh_session_ttl(), do: get_env(:refresh_session_ttl, 60 * 60 * 24 * 7)
+      def get_refresh_session_ttl(), do: get_env(:refresh_session_ttl, 60 * 60 * 24)
 
       defp get_env(key, default \\ nil) do
+        {:ok, application} = :application.get_application(unquote(__CALLER__.module))
+
         Application.get_env(
-          :application.get_application(unquote(__CALLER__.module)),
+          application,
           @ecto_sessions_module,
           []
         )

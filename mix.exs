@@ -6,7 +6,7 @@ defmodule EctoSessions.MixProject do
   def project do
     [
       app: :ecto_sessions,
-      version: "0.1.0",
+      version: "0.0.1-development",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       source_url: @source_url,
@@ -21,7 +21,7 @@ defmodule EctoSessions.MixProject do
         ]
       ],
       description:
-        "Helps you easily and securely manage databse backed sessions an ecto project.",
+        "Helps you easily and securely manage database backed sessions an ecto project.",
       name: "Ecto Sessions"
     ]
   end
@@ -47,7 +47,7 @@ defmodule EctoSessions.MixProject do
     [
       {:ecto, "~> 3.6"},
       {:ecto_sql, "~> 3.6"},
-      {:ex_doc, "~> 0.27", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false}
     ]
   end
 end

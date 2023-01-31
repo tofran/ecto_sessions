@@ -1,0 +1,115 @@
+<section class="phx-hero">
+  <h1>Welcome, user <code><%= @user.id %></code></h1>
+  <p>
+    In order to re-login with this user just save the user id.
+    <br/>
+    You are accessing this restricted page using the session id <code><%= @session.id %></code>.
+    <br/>
+  </p>
+
+  <%= form_for @conn, Routes.page_path(@conn, :sign_out), fn _form -> %>
+    <%= submit "Sign-Out (delete current session)" %>
+  <% end %>
+
+  <%= form_for @conn, Routes.page_path(@conn, :expire_session), fn _form -> %>
+    <%= submit "Expire session" %>
+  <% end %>
+
+  <br/>
+
+  <%= form_for @conn, Routes.page_path(@conn, :sign_out_all), fn _form -> %>
+    <%= submit "Sign out of all devices" %>
+  <% end %>
+
+  <%= form_for @conn, Routes.page_path(@conn, :login), fn form -> %>
+    <%= hidden_input form,
+        :user_id,
+        value: @user.id
+      %>
+    <%= submit "Re-login (create a new session)" %>
+  <% end %>
+
+</section>
+
+<section>
+  <h2>Sessions</h2>
+
+  <table>
+    <tr>
+      <th>Session id</th>
+      <th>Created at</th>
+      <th>Expires at</th>
+      <th>Actions</th>
+    </tr>
+    <%= for session <- @sessions do %>
+      <tr>
+        <td>
+          <%= if session.is_expired, do: "[Expired]" %>
+          <%= if session.id == @session.id, do: "[Current session]" %>
+
+          <details>
+            <summary>
+              <%= if session.is_expired do %>
+                <del><code><%= session.id %></code></del>
+              <% else %>
+                <code><%= session.id %></code>
+              <% end %>
+            </summary>
+            <dl>
+              <%= for {key, value} <- session.data do %>
+                <dt><%= key %></dt>
+                <dd><%= value %></dd>
+              <% end %>
+            </dl>
+
+          </details>
+        </td>
+        <td>
+          <time datetime={session.inserted_at}>
+            <%= session.inserted_at |> Calendar.strftime("%c") %>
+          </time>
+        </td>
+        <td>
+         <time
+            datetime={session.expires_at}
+            class={if session.is_expired, do: "expired", else: ""}
+          >
+            <%= session.expires_at |> Calendar.strftime("%c") %>
+          </time>
+        </td>
+        <td>
+          <%= form_for @conn, Routes.page_path(@conn, :sign_out), fn form -> %>
+            <%= hidden_input form,
+                :session_id,
+                value: session.id
+              %>
+            <%= submit "Delete" %>
+          <% end %>
+
+          <%= form_for @conn, Routes.page_path(@conn, :expire_session), fn form -> %>
+            <%= hidden_input form,
+              :session_id,
+              value: session.id
+            %>
+            <%= submit "Expire", disabled: session.is_expired %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </table>
+
+
+</section>
+
+<section>
+  <h2>API</h2>
+
+  Simple REST like API request:
+
+  <pre><code>curl --request GET \
+  --url <%= Routes.api_url(@conn, :me) %> \
+  --header 'Accept: application/json' \
+  --header 'X-Auth-Token: <%= @auth_token %>'</code></pre>
+
+  <br/>
+</section>

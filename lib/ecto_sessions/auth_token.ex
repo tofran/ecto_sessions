@@ -7,7 +7,7 @@ defmodule EctoSessions.AuthToken do
   @doc """
   Generates a cryptographically random auth token.
 
-  `length` is a psitive integer that will dictate the length of the token.
+  `length` is a positive integer that will dictate the length of the token.
   For authentication purposes it should not be lower than 32.
 
   The token will contain characters from `A-z`, `0-9` plus `_` and `-`.
@@ -62,7 +62,7 @@ defmodule EctoSessions.AuthToken do
   # Where `auth_token` might be hashed according to the configuration.
 
   @doc """
-  Hashes a token with the provided hashing algorith. Uses erlang's `:cripto` module.
+  Hashes a token with the provided hashing algorithm. Uses erlang's `:cripto` module.
 
   `hashing_algorithm` can be:
 
@@ -121,7 +121,7 @@ defmodule EctoSessions.AuthToken do
   end
 
   @doc """
-  Appends a global, secret salt to the given token.
+  Appends a global, secret salt to the given token. Sometimes referred as *pepper*.
 
   ## Examples
 

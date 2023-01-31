@@ -1,0 +1,21 @@
+FROM hexpm/elixir:1.14.2-erlang-25.1-alpine-3.17.0
+
+ARG MIX_ENV dev
+ENV MIX_ENV $MIX_ENV
+
+RUN apk update && \
+    apk add --no-cache inotify-tools
+
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+WORKDIR /code
+# COPY mix.exs mix.lock ./
+# RUN mix deps.get
+
+COPY ./demo ./
+COPY ./ /ecto_sessions/
+
+EXPOSE 4000
+
+CMD [ "./start-dev.sh" ]

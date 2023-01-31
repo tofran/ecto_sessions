@@ -1,0 +1,80 @@
+/* This file is for your main application CSS */
+@import "./phoenix.css";
+
+/* Alerts and form errors used by phx.new */
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.alert-info {
+  color: #31708f;
+  background-color: #d9edf7;
+  border-color: #bce8f1;
+}
+.alert-warning {
+  color: #8a6d3b;
+  background-color: #fcf8e3;
+  border-color: #faebcc;
+}
+.alert-danger {
+  color: #a94442;
+  background-color: #f2dede;
+  border-color: #ebccd1;
+}
+.alert p {
+  margin-bottom: 0;
+}
+.alert:empty {
+  display: none;
+}
+.invalid-feedback {
+  color: #a94442;
+  display: block;
+  margin: -1rem 0 2rem;
+}
+
+form {
+  margin: 0;
+  display: inline;
+}
+
+form button {
+  padding: 0 1.0rem;
+}
+
+.expired {
+  color: rgb(142, 0, 0);
+}
+
+tr {
+  vertical-align: text-top;
+}
+
+details dl {
+  font-size: small;
+}
+
+summary {
+  white-space: nowrap;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: max-content auto; 
+}
+
+details dl {
+  padding-left: 3em;
+}
+
+dt {
+  grid-column-start: 1;
+  font-weight: bold;
+}
+
+dd {
+  grid-column-start: 2;
+  margin-bottom: 1em;
+}

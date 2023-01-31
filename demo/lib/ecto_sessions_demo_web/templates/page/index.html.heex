@@ -1,0 +1,49 @@
+<section class="phx-hero">
+  <h1>ecto_sessions demo</h1>
+  <p>
+    Simple database backed sessions.
+    <br/>
+    <a href="https://github.com/tofran/ecto_sessions">Source code (GitHub)</a>
+    ·
+    <a href="https://hexdocs.pm/ecto_sessions">Documentation (Hexdocs)</a>
+  </p>
+</section>
+
+<section class="row">
+  <article class="column">
+    <h2>Signup</h2>
+
+    <%= form_for @conn, Routes.page_path(@conn, :signup), fn _form -> %>
+      <%= submit "Create user" %>
+    <% end %>
+
+    <%# <ul>
+      <li>
+        <a href="https://hexdocs.pm/phoenix/overview.html">Create an account</a>
+      </li>
+      <li>
+        <a href="https://github.com/phoenixframework/phoenix"></a>
+      </li>
+      <li>
+        <a href="https://github.com/phoenixframework/phoenix/blob/v1.6/CHANGELOG.md">v1.6 Changelog</a>
+      </li>
+    </ul> %>
+  </article>
+  <article class="column">
+    <h2>Login</h2>
+
+    <%= form_for @conn, Routes.page_path(@conn, :login), fn f -> %>
+      <label>
+        User id:
+        <%= text_input f,
+            :user_id,
+            placeholder: "user-id",
+            autocomplete: "off",
+            value: @last_user_id,
+            required: true
+          %>
+      </label>
+      <%= submit "Login" %>
+    <% end %>
+  </article>
+</section>
