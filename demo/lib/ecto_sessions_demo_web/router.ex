@@ -24,6 +24,8 @@ defmodule EctoSessionsDemoWeb.Router do
     get("/", PageController, :index)
     post("/login", PageController, :login)
     post("/signup", PageController, :signup)
+
+    get("/stats", PageController, :stats)
   end
 
   scope "/", EctoSessionsDemoWeb do

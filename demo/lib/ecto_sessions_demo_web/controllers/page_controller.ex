@@ -129,7 +129,7 @@ defmodule EctoSessionsDemoWeb.PageController do
     case Sessions.get_session(
            id: session_id,
            user_id: user.id,
-           include_expired: true
+           status: :all
          ) do
       nil ->
         conn
@@ -196,7 +196,7 @@ defmodule EctoSessionsDemoWeb.PageController do
     sessions =
       Sessions.list_sessions(
         user_id: current_user.id,
-        include_expired: true
+        status: :all
       )
 
     render(
@@ -204,6 +204,16 @@ defmodule EctoSessionsDemoWeb.PageController do
       "account.html",
       sessions: sessions,
       auth_token: Map.get(conn.req_cookies, @auth_token_cookie_name)
+    )
+  end
+
+  def stats(conn, _) do
+    render(
+      conn,
+      "stats.html",
+      total_session_count: Sessions.count(status: :all),
+      active_session_count: Sessions.count(status: :valid),
+      expired_session_count: Sessions.count(status: :expired)
     )
   end
 end

@@ -90,7 +90,7 @@ defmodule EctoSessions do
       end
 
       def filter_session_query(query, filters) when is_list(filters) do
-        filters = Keyword.put_new(filters, :include_expired, false)
+        filters = Keyword.put_new(filters, :status, :valid)
 
         Enum.reduce(
           filters,
@@ -101,7 +101,9 @@ defmodule EctoSessions do
         )
       end
 
-      def filter_session_query_by(query, :include_expired, false) do
+      def filter_session_query_by(query, :status, :all), do: query
+
+      def filter_session_query_by(query, :status, :valid) do
         from(
           session in query,
           where:
@@ -110,18 +112,18 @@ defmodule EctoSessions do
         )
       end
 
-      def filter_session_query_by(query, :include_expired, true), do: query
-
-      def filter_session_query_by(query, :only_expired, true) do
+      def filter_session_query_by(query, :status, :expired) do
         from(
           session in query,
           where:
-            not is_nil(session.expires_at) or
+            not is_nil(session.expires_at) and
               session.expires_at <= ^DateTime.utc_now()
         )
       end
 
-      def filter_session_query_by(query, :only_expired, false), do: query
+      def filter_session_query_by(query, :status, status) do
+        raise RuntimeError, "Invalid status #{status}"
+      end
 
       def filter_session_query_by(query, :auth_token, nil) do
         from(session in query, where: false)
@@ -195,6 +197,19 @@ defmodule EctoSessions do
       def update_session!(changeset) do
         @repo.update!(changeset)
       end
+
+      def count(filters \\ [], options \\ []) do
+        get_sessions_query(filters, options)
+        |> @repo.aggregate(:count, prefix: unquote(prefix))
+      end
+
+      def delete_expired() do
+        {delete_count, _} =
+          get_sessions_query([status: :expired], delete_query: true)
+          |> @repo.delete_all(prefix: unquote(prefix))
+
+        delete_count
+      end
     end
   end
 
@@ -202,7 +217,7 @@ defmodule EctoSessions do
   Creates a session. `attrs` is a map that contains `EctoSessions.Session` attributes,
   where the keys are atoms.
 
-  Uses `Ecto.Repo.insert/2`
+  Uses `Ecto.Repo.insert`
 
   ## Examples
 
@@ -219,7 +234,7 @@ defmodule EctoSessions do
   @callback create_session(attrs :: map) :: Ecto.Schema.t()
 
   @doc """
-  Same as `create_session/1` but using `Ecto.Repo.insert!/2`.
+  Same as `create_session/1` but using `Ecto.Repo.insert!`.
   """
   @callback create_session!(filters :: map, options :: list) :: Ecto.Schema.t()
 
@@ -283,5 +298,15 @@ defmodule EctoSessions do
   @doc """
   Updates a session using `Repo.update!`.
   """
-  @callback delete_session!(Ecto.Changeset.t()) :: Ecto.Schema.t()
+  @callback update_session!(Ecto.Changeset.t()) :: Ecto.Schema.t()
+
+  @doc """
+  Count the sessions matching the provided filters.
+  """
+  @callback count(Ecto.Changeset.t()) :: Ecto.Schema.t()
+
+  @doc """
+  Deletes expired sessions.
+  """
+  @callback delete_expired(Ecto.Changeset.t()) :: Ecto.Schema.t()
 end
