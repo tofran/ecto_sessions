@@ -25,7 +25,8 @@ defmodule EctoSessions.MixProject do
       ],
       description:
         "Helps you easily and securely manage database backed sessions (or API keys) in an ecto project.",
-      name: "Ecto Sessions"
+      name: "Ecto Sessions",
+      consolidate_protocols: Mix.env() != :test
     ]
   end
 
