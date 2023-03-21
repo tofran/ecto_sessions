@@ -15,9 +15,9 @@ defmodule EctoSessionsDemo.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: EctoSessionsDemo.PubSub},
       # Start the Endpoint (http/https)
-      EctoSessionsDemoWeb.Endpoint
+      EctoSessionsDemoWeb.Endpoint,
       # Start a worker by calling: EctoSessionsDemo.Worker.start_link(arg)
-      # {EctoSessionsDemo.Worker, arg}
+      {EctoSessions.ExpiredSessionPruner, {EctoSessionsDemo.Sessions, :timer.hours(24)}}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
