@@ -129,7 +129,7 @@ defmodule EctoSessionsDemoWeb.PageController do
     case Sessions.get_session(
            id: session_id,
            user_id: user.id,
-           include_expired: true
+           status: :all
          ) do
       nil ->
         conn
@@ -196,7 +196,7 @@ defmodule EctoSessionsDemoWeb.PageController do
     sessions =
       Sessions.list_sessions(
         user_id: current_user.id,
-        include_expired: true
+        status: :all
       )
 
     render(

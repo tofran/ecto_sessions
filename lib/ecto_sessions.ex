@@ -90,7 +90,7 @@ defmodule EctoSessions do
       end
 
       def filter_session_query(query, filters) when is_list(filters) do
-        filters = Keyword.put_new(filters, :include_expired, false)
+        filters = Keyword.put_new(filters, :status, :valid)
 
         Enum.reduce(
           filters,
@@ -101,7 +101,9 @@ defmodule EctoSessions do
         )
       end
 
-      def filter_session_query_by(query, :include_expired, false) do
+      def filter_session_query_by(query, :status, :all), do: query
+
+      def filter_session_query_by(query, :status, :valid) do
         from(
           session in query,
           where:
@@ -110,18 +112,18 @@ defmodule EctoSessions do
         )
       end
 
-      def filter_session_query_by(query, :include_expired, true), do: query
-
-      def filter_session_query_by(query, :only_expired, true) do
+      def filter_session_query_by(query, :status, :expired) do
         from(
           session in query,
           where:
-            not is_nil(session.expires_at) or
+            not is_nil(session.expires_at) and
               session.expires_at <= ^DateTime.utc_now()
         )
       end
 
-      def filter_session_query_by(query, :only_expired, false), do: query
+      def filter_session_query_by(query, :status, status) do
+        raise RuntimeError, "Invalid status #{status}"
+      end
 
       def filter_session_query_by(query, :auth_token, nil) do
         from(session in query, where: false)
