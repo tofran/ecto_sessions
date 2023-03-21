@@ -1,18 +1,22 @@
 defmodule EctoSessions.MixProject do
   use Mix.Project
 
+  @version "0.0.1-development"
+
   @source_url "https://github.com/tofran/ecto_sessions"
 
   def project do
     [
       app: :ecto_sessions,
-      version: "0.0.1-development",
+      version: @version,
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       source_url: @source_url,
       deps: deps(),
       package: package(),
       docs: [
+        name: "Ecto Sessions",
+        source_ref: "v#{@version}",
         main: "readme",
         source_url: @source_url,
         extras: [
@@ -20,7 +24,7 @@ defmodule EctoSessions.MixProject do
         ]
       ],
       description:
-        "Helps you easily and securely manage database backed sessions an ecto project.",
+        "Helps you easily and securely manage database backed sessions (or API keys) in an ecto project.",
       name: "Ecto Sessions"
     ]
   end
