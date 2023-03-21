@@ -102,9 +102,8 @@ defmodule EctoSessions.AuthToken do
       iex> hash("sample", :sha3_256)
       "f68f564e181663381ef67ae5849d3dd1d0f1044cf468d0a0b7875e4ff121906f"
 
-      iex> hash("sample", :blake2b)
-      "cc6c2d671173dd85a4ef30b0376d14980c20e54c69752fceb4abf6e583924309" <>
-        "e15981e6aa728e9127d5a422b1afdd5cbe1a5d0097f34186f78424d5f3588859"
+      iex> hash("sample", :nil)
+      "sample"
 
   """
   @spec hash(binary, atom) :: any

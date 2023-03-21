@@ -5,7 +5,6 @@
 [![ecto_sessions in hex.pm](https://img.shields.io/hexpm/v/ecto_sessions?style=flat)](https://hex.pm/packages/ecto_sessions)
 [![ecto_sessions documentation](https://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/ecto_sessions/)
 
-
 `ecto_sessions` helps you easily and securely manage database backed sessions
 in your Ecto project.
 
@@ -20,31 +19,36 @@ with them.
 
 Advantages:
 
-  - Ability to query active sessions for a given user.
-    Ex: list the devices where a user has a valid session or lit the active
-    API keys for a given project.
-  - Full control of the validity: at any time your application will be able to
-    control if a given session is valid, change their expiration and even
-    revalidate expired tokens.
-  - Ability to store arbitrary data, without increasing the token size.
-    Ex: Device/token name, permissions, metadata, etc.
+- Ability to query active sessions for a given user.
+  Ex: list the devices where a user has a valid session or lit the active
+  API keys for a given project.
+- Full control of the validity: at any time your application will be able to
+  control if a given session is valid, change their expiration and even
+  revalidate expired tokens.
+- Ability to store arbitrary data, without increasing the token size.
+  Ex: Device/token name, permissions, metadata, etc.
 
 Disadvantages:
 
-  - Depending on the design, you might be adding a database query on each
-    request - just like traditional sessions;
-    Note that you can use a separate database, and furthermore this code
-    might also be adapted for different backends, like key-value stores.
-  - Clients and other services will not be able to inspect the contents 
-    of the token. This might be useful for example to predict if a token
-    is expired before making a request.
-    This might also be considered an advantage in scenarios you don't want
-    to give any control to the client.
+- Depending on the design, you might be adding a database query on each
+  request - just like traditional sessions;
+  Note that you can use a separate database, and furthermore this code
+  might also be adapted for different backends, like key-value stores.
+- Clients and other services will not be able to inspect the contents
+  of the token. This might be useful for example to predict if a token
+  is expired before making a request.
+  This might also be considered an advantage in scenarios you don't want
+  to give any control to the client.
 
 One design that allows you to have the benefits of stateless and
-stateful sessions combined, is to have *short-lived signed tokens*,
-and database backed sessions for *long-lived refresh tokens*.
+stateful sessions combined, is to have _short-lived signed tokens_,
+and database backed sessions for _long-lived refresh tokens_.
 
+## Demo
+
+This repository includes a full phoenix demo project inside the `./demo` directory.
+There's a hosted live version available at [ecto-sessions-demo.tofran.com](https://ecto-sessions-demo.tofran.com/),
+feel free to play with it and see how it works/what features it enables.
 
 ## Installation
 
@@ -54,7 +58,7 @@ to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ecto_sessions, "~> 0.1.0"}
+    {:ecto_sessions, "> 0.0.0"}
   ]
 end
 ```
@@ -69,4 +73,3 @@ end
 ```
 
 Refer to [EctoSessions module documentation](https://hexdocs.pm/ecto_sessions/EctoSessions.html) for more details.
-
