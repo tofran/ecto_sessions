@@ -16,8 +16,7 @@ defmodule EctoSessions.MixProject do
         main: "readme",
         source_url: @source_url,
         extras: [
-          "README.md",
-          "CHANGELOG.md"
+          "README.md"
         ]
       ],
       description:
