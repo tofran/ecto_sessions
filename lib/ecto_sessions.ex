@@ -197,6 +197,19 @@ defmodule EctoSessions do
       def update_session!(changeset) do
         @repo.update!(changeset)
       end
+
+      def count(filters \\ [], options \\ []) do
+        get_sessions_query(filters, options)
+        |> @repo.aggregate(:count, prefix: unquote(prefix))
+      end
+
+      def delete_expired() do
+        {delete_count, _} =
+          get_sessions_query([status: :expired], delete_query: true)
+          |> @repo.delete_all(prefix: unquote(prefix))
+
+        delete_count
+      end
     end
   end
 
@@ -204,7 +217,7 @@ defmodule EctoSessions do
   Creates a session. `attrs` is a map that contains `EctoSessions.Session` attributes,
   where the keys are atoms.
 
-  Uses `Ecto.Repo.insert/2`
+  Uses `Ecto.Repo.insert`
 
   ## Examples
 
@@ -221,7 +234,7 @@ defmodule EctoSessions do
   @callback create_session(attrs :: map) :: Ecto.Schema.t()
 
   @doc """
-  Same as `create_session/1` but using `Ecto.Repo.insert!/2`.
+  Same as `create_session/1` but using `Ecto.Repo.insert!`.
   """
   @callback create_session!(filters :: map, options :: list) :: Ecto.Schema.t()
 
@@ -285,5 +298,15 @@ defmodule EctoSessions do
   @doc """
   Updates a session using `Repo.update!`.
   """
-  @callback delete_session!(Ecto.Changeset.t()) :: Ecto.Schema.t()
+  @callback update_session!(Ecto.Changeset.t()) :: Ecto.Schema.t()
+
+  @doc """
+  Count the sessions matching the provided filters.
+  """
+  @callback count(Ecto.Changeset.t()) :: Ecto.Schema.t()
+
+  @doc """
+  Deletes expired sessions.
+  """
+  @callback delete_expired(Ecto.Changeset.t()) :: Ecto.Schema.t()
 end

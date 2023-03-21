@@ -206,4 +206,14 @@ defmodule EctoSessionsDemoWeb.PageController do
       auth_token: Map.get(conn.req_cookies, @auth_token_cookie_name)
     )
   end
+
+  def stats(conn, _) do
+    render(
+      conn,
+      "stats.html",
+      total_session_count: Sessions.count(status: :all),
+      active_session_count: Sessions.count(status: :valid),
+      expired_session_count: Sessions.count(status: :expired)
+    )
+  end
 end
