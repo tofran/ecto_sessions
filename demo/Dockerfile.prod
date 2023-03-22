@@ -1,4 +1,8 @@
-FROM hexpm/elixir:1.14.2-erlang-25.1-alpine-3.17.0 AS builder
+ARG ELIXIR_VERSION=1.14.2
+ARG ERLANG_VERSION=25.1
+ARG ALPINE_VERSION=3.17.0
+
+FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-alpine-${ALPINE_VERSION} AS builder
 
 WORKDIR /code
 
@@ -10,31 +14,31 @@ RUN apk update && \
 RUN mix local.hex --force && \
     mix local.rebar --force
 
-COPY mix.exs mix.lock ./
+COPY ./demo/mix.exs ./demo/mix.lock ./
 RUN mix deps.get
 
-COPY ./ ./
-COPY ../ /ecto_sessions/
+COPY ./demo/ ./
+COPY ./ /ecto_sessions
 
-# RUN mix do \
-#     compile, \
-#     release --path /release
+RUN mix do \
+    compile, \
+    release --path /release
 
-# FROM alpine:3.16.0 as runtime
+FROM alpine:${ALPINE_VERSION} as runtime
 
-# WORKDIR /app
+WORKDIR /app
 
-# RUN apk update && \
-#     apk add --no-cache \
-#     openssl-dev \
-#     libgcc \
-#     libstdc++ \
-#     ncurses-libs
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+        libgcc \
+        libstdc++ \
+        ncurses-libs
 
-# ENV MIX_ENV=${MIX_ENV}
+ENV MIX_ENV=${MIX_ENV}
 
-# COPY --from=builder /release/ ./
+COPY --from=builder /release/ ./
 
-# EXPOSE 4000
+EXPOSE 4000
 
-# CMD ["/app/bin/ecto_sessions_demo", "start"]
+CMD ["/app/bin/ecto_sessions_demo", "start"]
