@@ -155,11 +155,11 @@ defmodule EctoSessions.Session do
       end
 
       def get_new_expires_at(current_expires_at) do
-        case Config.get_refresh_session_ttl() do
+        case Config.get_extend_session_stale_time() do
           nil ->
             current_expires_at
 
-          refresh_session_ttl ->
+          extend_session_stale_time ->
             proposed_expired_at =
               DateTime.add(
                 DateTime.utc_now(),
@@ -170,7 +170,7 @@ defmodule EctoSessions.Session do
             expired_at_threshold =
               DateTime.add(
                 current_expires_at,
-                refresh_session_ttl,
+                extend_session_stale_time,
                 :second
               )
 

@@ -157,11 +157,13 @@ defmodule EctoSessions do
       def get_session(filters, options \\ []) when is_list(filters) do
         get_sessions_query(filters, options)
         |> @repo.one(prefix: unquote(prefix))
+        |> maybe_extend_session(options)
       end
 
       def get_session!(filters, options \\ []) do
         get_sessions_query(filters, options)
         |> @repo.one!(prefix: unquote(prefix))
+        |> maybe_extend_session(options)
       end
 
       def list_sessions(filters, options \\ []) do
@@ -174,7 +176,7 @@ defmodule EctoSessions do
         |> @repo.all(prefix: unquote(prefix))
       end
 
-      def refresh_session(session) do
+      def extend_session(session) do
         Session.changeset(session)
         |> update_session!()
       end
@@ -210,6 +212,30 @@ defmodule EctoSessions do
 
         delete_count
       end
+
+      defp maybe_extend_session({:ok, session}, options) do
+        {
+          :ok,
+          maybe_extend_session(session, options)
+        }
+      end
+
+      defp maybe_extend_session(%Session{} = session, options) do
+        should_extend_session =
+          Keyword.get(
+            options,
+            :should_extend_session,
+            Config.get_auto_extend_session()
+          )
+
+        if should_extend_session do
+          extend_session(session)
+        end
+
+        session
+      end
+
+      defp maybe_extend_session(result, options), do: result
     end
   end
 
@@ -262,11 +288,20 @@ defmodule EctoSessions do
 
   @doc """
   Retrieves a session from the database.
+
+  Options:
+
+  - `preload`: ecto preloads, see `get_sessions_query/1`.
+  - `auto_extend_session`: override the default `auto_extend_session` config
+    (`Config.get_auto_extend_session()`). `true` will perform session extending,
+    `false` to prevent this behaviour.
   """
   @callback get_session(filters :: any, options :: list) :: {atom, Ecto.Schema.t()}
 
   @doc """
-  Retrieves a session from the database using `Repo.one!`
+  Retrieves a session from the database using `Ecto.Repo.one!`
+
+  See `get_session/2` for more information.
   """
   @callback get_session!(filters :: any, options :: list) :: Ecto.Schema.t()
 
@@ -283,20 +318,20 @@ defmodule EctoSessions do
   @doc """
   Given a session, ensure `expires_at` is updated according to the `EctoSessions.Config`.
   """
-  @callback refresh_session(Ecto.Schema.t()) :: Ecto.Schema.t()
+  @callback extend_session(Ecto.Schema.t()) :: Ecto.Schema.t()
 
   @doc """
-  Deletes the session using `Repo.delete`.
+  Deletes the session using `Ecto.Repo.delete`.
   """
   @callback delete_session(Ecto.Schema.t()) :: {atom, any}
 
   @doc """
-  Deletes the session using `Repo.delete!`.
+  Deletes the session using `Ecto.Repo.delete!`.
   """
   @callback delete_session!(Ecto.Schema.t()) :: any
 
   @doc """
-  Updates a session using `Repo.update!`.
+  Updates a session using `Ecto.Repo.update!`.
   """
   @callback update_session!(Ecto.Changeset.t()) :: Ecto.Schema.t()
 
