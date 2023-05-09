@@ -224,27 +224,27 @@ defmodule EctoSessions.SessionTest do
     end
 
     @tag :skip
-    test "when current expires_at is set (refresh is enabled)" do
+    test "when current expires_at is set (extending is enabled)" do
       assert new_expires_at = Session.get_new_expires_at(~U[2022-01-01 00:00:00.000000Z])
 
       assert DateTime.compare(new_expires_at, DateTime.utc_now()) == :gt
     end
   end
 
-  describe "get_new_expires_at/2 with refresh_session_ttl disabled" do
-    defmodule RefreshingDisabledEctoSessions do
+  describe "get_new_expires_at/2 with extend_session_stale_time disabled" do
+    defmodule ExtendingDisabledEctoSessions do
       use EctoSessions,
         otp_app: :sample_app,
         repo: SampleRepo
     end
 
-    alias RefreshingDisabledEctoSessions.Session
+    alias ExtendingDisabledEctoSessions.Session
 
     setup do
       Application.put_env(
         @otp_app,
-        RefreshingDisabledEctoSessions,
-        refresh_session_ttl: nil
+        ExtendingDisabledEctoSessions,
+        extend_session_stale_time: nil
       )
     end
 
